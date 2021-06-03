@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sat, 19 Oct 2019 00:52:12 -0500
+Subject: [PATCH] [FEAT] Logger settings (suppress pointless logs)
+
+{EXPLANATION}
+
+$-----------------------------$
+settings:
+  logger:
+    suppress-init-legacy-material-errors:
+      default: false
+      description: |-
+        Suppress warnings about plugins initializing the legacy material api
+    suppress-ignored-advancement-warnings:
+      default: false
+      description: |-
+        Suppress warnings about unknown attributes in console and logs
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/AdvancementDataPlayer.java b/src/main/java/net/minecraft/server/AdvancementDataPlayer.java
+index dfdbc028f68ced197ad179248ed3b1e9d70ba057..a1ee1066108985a95abddb03ff447b5a14f4f85f 100644
+--- a/src/main/java/net/minecraft/server/AdvancementDataPlayer.java
++++ b/src/main/java/net/minecraft/server/AdvancementDataPlayer.java
+@@ -190,6 +190,7 @@ public class AdvancementDataPlayer {
+                         if (advancement == null) {
+                             // CraftBukkit start
+                             if (entry.getKey().getNamespace().equals("minecraft")) {
++                                if (!net.pl3x.purpur.PurpurConfig.loggerSuppressIgnoredAdvancementWarnings) // Purpur
+                                 AdvancementDataPlayer.LOGGER.warn("Ignored advancement '{}' in progress file {} - it doesn't exist anymore?", entry.getKey(), this.f);
+                             }
+                             // CraftBukkit end
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index afd0c577069f2a856caf41bd2dd5187db4866fa3..c7755cea5e8337af7acc96c6a34afa547b391035 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -178,4 +178,11 @@ public class PurpurConfig {
+         InventoryType.ENDER_CHEST.setDefaultSize(enderChestSixRows ? 54 : 27);
+         enderChestPermissionRows = getBoolean("settings.blocks.ender_chest.use-permissions-for-rows", enderChestPermissionRows);
+     }
++
++    public static boolean loggerSuppressInitLegacyMaterialError = false;
++    public static boolean loggerSuppressIgnoredAdvancementWarnings = false;
++    private static void loggerSettings() {
++        loggerSuppressInitLegacyMaterialError = getBoolean("settings.logger.suppress-init-legacy-material-errors", loggerSuppressInitLegacyMaterialError);
++        loggerSuppressIgnoredAdvancementWarnings = getBoolean("settings.logger.suppress-ignored-advancement-warnings", loggerSuppressIgnoredAdvancementWarnings);
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/legacy/CraftLegacy.java b/src/main/java/org/bukkit/craftbukkit/legacy/CraftLegacy.java
+index b86604cbf3543b978df000d8f74c6185aa2ae7ec..5df82b0409278bd298e837aa43941247de3f94fe 100644
+--- a/src/main/java/org/bukkit/craftbukkit/legacy/CraftLegacy.java
++++ b/src/main/java/org/bukkit/craftbukkit/legacy/CraftLegacy.java
+@@ -254,6 +254,7 @@ public final class CraftLegacy {
+     }
+ 
+     static {
++        if (!net.pl3x.purpur.PurpurConfig.loggerSuppressInitLegacyMaterialError) // Purpur
+         System.err.println("Initializing Legacy Material Support. Unless you have legacy plugins and/or data this is a bug!");
+         if (MinecraftServer.getServer() != null && MinecraftServer.getServer().isDebugging()) {
+             new Exception().printStackTrace();

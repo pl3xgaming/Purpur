@@ -1,3 +1,5 @@
+import xyz.jpenilla.toothpick.task.ApplyPatches
+
 plugins {
     `java-library`
     `maven-publish`
@@ -42,5 +44,11 @@ subprojects {
     publishing.repositories.maven {
         url = uri("https://repo.pl3x.net/snapshots")
         credentials(PasswordCredentials::class)
+    }
+}
+
+tasks {
+    withType<ApplyPatches> {
+        argument("--keep-non-patch")
     }
 }

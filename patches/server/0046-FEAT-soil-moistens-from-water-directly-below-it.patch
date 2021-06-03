@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Fri, 21 Jun 2019 14:37:10 -0500
+Subject: [PATCH] [FEAT] soil moistens from water directly below it
+
+{EXPLANATION}
+
+$-----------------------------$
+blocks:
+  farmland:
+    gets-moist-from-below:
+      default: false
+      description: |-
+        Soil moistens from water directly below it
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/level/block/BlockSoil.java b/src/main/java/net/minecraft/world/level/block/BlockSoil.java
+index 3bedb1c6a0f221c7b40ee0a50f676e8b05bd37a7..2bbaa2fb426869223a9b2f07406496c1b0daff3f 100644
+--- a/src/main/java/net/minecraft/world/level/block/BlockSoil.java
++++ b/src/main/java/net/minecraft/world/level/block/BlockSoil.java
+@@ -139,19 +139,14 @@ public class BlockSoil extends Block {
+     }
+ 
+     private static boolean a(IWorldReader iworldreader, BlockPosition blockposition) {
+-        Iterator iterator = BlockPosition.a(blockposition.b(-4, 0, -4), blockposition.b(4, 1, 4)).iterator();
+-
+-        BlockPosition blockposition1;
+-
+-        do {
+-            if (!iterator.hasNext()) {
+-                return false;
++        // Purpur start
++        for (BlockPosition position : BlockPosition.a(blockposition.b(-4, 0, -4), blockposition.b(4, 1, 4))) {
++            if (iworldreader.getFluid(position).a(TagsFluid.WATER)) {
++                return true;
+             }
+-
+-            blockposition1 = (BlockPosition) iterator.next();
+-        } while (!iworldreader.getFluid(blockposition1).a((Tag) TagsFluid.WATER));
+-
+-        return true;
++        }
++        return ((WorldServer) iworldreader).purpurConfig.farmlandGetsMoistFromBelow && iworldreader.getFluid(blockposition.shift(EnumDirection.DOWN)).a(TagsFluid.WATER);
++        // Purpur end
+     }
+ 
+     @Override
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index b67f87f38d0ff99ff62d2103ecc737317a435102..2e4a928a3e88fb3d961d9530695cd7154321c79b 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -109,6 +109,11 @@ public class PurpurWorldConfig {
+         });
+     }
+ 
++    public boolean farmlandGetsMoistFromBelow = false;
++    private void farmlandSettings() {
++        farmlandGetsMoistFromBelow = getBoolean("blocks.farmland.gets-moist-from-below", farmlandGetsMoistFromBelow);
++    }
++
+     public boolean signAllowColors = false;
+     public boolean signRightClickEdit = false;
+     private void signSettings() {

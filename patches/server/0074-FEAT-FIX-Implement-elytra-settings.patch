@@ -1,0 +1,154 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Thu, 25 Jul 2019 18:07:37 -0500
+Subject: [PATCH] [FEAT] [FIX] Implement elytra settings
+
+{EXPLANATION}
+
+$-----------------------------$
+gameplay-mechanics:
+  elytra:
+    damage-per-second:
+      default: 1
+      description: |-
+        the damage an elytra takes during flight per second
+    damage-multiplied-by:
+      default: 0.0
+      description: |-
+        Damage is multiplied by speed if flight is faster than set speed.
+        Set to 0 to disable
+    ignore-unbreaking:
+      default: false
+      description: |-
+        Should elytras ignore the unbreaking enchantment
+    damage-per-boost:
+      firework:
+        default: 0
+        description: |-
+          amount of damage to deal to the elytra when firework boost activates
+      trident:
+        default: 0
+        description: |-
+          amount of damage to deal to the elytra when firework boost activates
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/EntityLiving.java b/src/main/java/net/minecraft/world/entity/EntityLiving.java
+index e0b42e8db2e48f7327abfbb643ce4f14cc13a7af..4bac98718f67699433fdd89307c20438f3ee6425 100644
+--- a/src/main/java/net/minecraft/world/entity/EntityLiving.java
++++ b/src/main/java/net/minecraft/world/entity/EntityLiving.java
+@@ -2952,7 +2952,16 @@ public abstract class EntityLiving extends Entity {
+             if (itemstack.getItem() == Items.ELYTRA && ItemElytra.d(itemstack)) {
+                 flag = true;
+                 if (!this.world.isClientSide && (this.be + 1) % 20 == 0) {
+-                    itemstack.damage(1, this, (entityliving) -> {
++                    // Purpur start
++                    int damage = world.purpurConfig.elytraDamagePerSecond;
++                    if (world.purpurConfig.elytraDamageMultiplyBySpeed > 0) {
++                        double speed = getMot().magnitudeSquared();
++                        if (speed > world.purpurConfig.elytraDamageMultiplyBySpeed) {
++                            damage *= (int) speed;
++                        }
++                    }
++                    itemstack.damage(damage, this, (entityliving) -> {
++                    // Purpur end
+                         entityliving.broadcastItemBreak(EnumItemSlot.CHEST);
+                     });
+                 }
+diff --git a/src/main/java/net/minecraft/world/item/ItemFireworks.java b/src/main/java/net/minecraft/world/item/ItemFireworks.java
+index e7f958d137257da912ce9b83db017b4423959943..210b95f1d67ec12566d6fc93b8234e11ad132d1a 100644
+--- a/src/main/java/net/minecraft/world/item/ItemFireworks.java
++++ b/src/main/java/net/minecraft/world/item/ItemFireworks.java
+@@ -7,6 +7,7 @@ import net.minecraft.server.level.EntityPlayer;
+ import net.minecraft.world.EnumHand;
+ import net.minecraft.world.EnumInteractionResult;
+ import net.minecraft.world.InteractionResultWrapper;
++import net.minecraft.world.entity.EnumItemSlot;
+ import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.entity.projectile.EntityFireworks;
+ import net.minecraft.world.item.context.ItemActionContext;
+@@ -53,6 +54,14 @@ public class ItemFireworks extends Item {
+                 // Paper start
+                 com.destroystokyo.paper.event.player.PlayerElytraBoostEvent event = new com.destroystokyo.paper.event.player.PlayerElytraBoostEvent((org.bukkit.entity.Player) entityhuman.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack), (org.bukkit.entity.Firework) entityfireworks.getBukkitEntity());
+                 if (event.callEvent() && world.addEntity(entityfireworks)) {
++                    // Purpur start
++                    if (world.purpurConfig.elytraDamagePerFireworkBoost > 0) {
++                        ItemStack chestItem = entityhuman.getEquipment(EnumItemSlot.CHEST);
++                        if (chestItem.getItem() == Items.ELYTRA) {
++                            chestItem.damage(world.purpurConfig.elytraDamagePerFireworkBoost, entityhuman, (entityliving) -> entityliving.broadcastItemBreak(EnumItemSlot.CHEST));
++                        }
++                    }
++                    // Purpur end
+                     if (event.shouldConsume() && !entityhuman.abilities.canInstantlyBuild) {
+                         itemstack.subtract(1);
+                     } else ((EntityPlayer) entityhuman).getBukkitEntity().updateInventory();
+diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
+index 72400425d6177ba938057ec145f9499eb1160288..2aa761656ce75f78732c502fd4ce65034b6c2919 100644
+--- a/src/main/java/net/minecraft/world/item/ItemStack.java
++++ b/src/main/java/net/minecraft/world/item/ItemStack.java
+@@ -500,7 +500,7 @@ public final class ItemStack {
+             int j;
+ 
+             if (i > 0) {
+-                j = EnchantmentManager.getEnchantmentLevel(Enchantments.DURABILITY, this);
++                j = (getItem() == Items.ELYTRA && entityplayer != null && entityplayer.world.purpurConfig.elytraIgnoreUnbreaking) ? 0 : EnchantmentManager.getEnchantmentLevel(Enchantments.DURABILITY, this); // Purpur
+                 int k = 0;
+ 
+                 for (int l = 0; j > 0 && l < i; ++l) {
+@@ -546,6 +546,12 @@ public final class ItemStack {
+                 if (this.isDamaged(i, t0.getRandom(), t0 instanceof EntityPlayer ? (EntityPlayer) t0 : null)) {
+                     consumer.accept(t0);
+                     Item item = this.getItem();
++                    // Purpur start
++                    if (item == Items.ELYTRA) {
++                        setDamage(item.getMaxDurability() - 1);
++                        return;
++                    }
++                    // Purpur end
+                     // CraftBukkit start - Check for item breaking
+                     if (this.count == 1 && t0 instanceof EntityHuman) {
+                         org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerItemBreakEvent((EntityHuman) t0, this);
+diff --git a/src/main/java/net/minecraft/world/item/ItemTrident.java b/src/main/java/net/minecraft/world/item/ItemTrident.java
+index 9896477b54cf91a88bdfc3d85018a59193b32859..0711d195c654edef5875f587e391bacfdea096da 100644
+--- a/src/main/java/net/minecraft/world/item/ItemTrident.java
++++ b/src/main/java/net/minecraft/world/item/ItemTrident.java
+@@ -123,6 +123,16 @@ public class ItemTrident extends Item implements ItemVanishable {
+                         f2 *= f6 / f5;
+                         f3 *= f6 / f5;
+                         f4 *= f6 / f5;
++
++                        // Purpur start
++                        ItemStack chestItem = entityhuman.getEquipment(EnumItemSlot.CHEST);
++                        if (chestItem.getItem() == Items.ELYTRA && world.purpurConfig.elytraDamagePerTridentBoost > 0) {
++                            chestItem.damage(world.purpurConfig.elytraDamagePerTridentBoost, entityhuman, (entity) -> {
++                                entity.broadcastItemBreak(EnumItemSlot.CHEST);
++                            });
++                        }
++                        // Purpur end
++
+                         entityhuman.i((double) f2, (double) f3, (double) f4);
+                         entityhuman.r(20);
+                         if (entityhuman.isOnGround()) {
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index ce1d33315a7999fb304d6f7d843ab3d1f415eb17..5e577cd97df14463f590919b2931a5065ac37033 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -165,6 +165,19 @@ public class PurpurWorldConfig {
+         voidDamageDealt = getDouble("gameplay-mechanics.void-damage-dealt", voidDamageDealt);
+     }
+ 
++    public int elytraDamagePerSecond = 1;
++    public double elytraDamageMultiplyBySpeed = 0;
++    public boolean elytraIgnoreUnbreaking = false;
++    public int elytraDamagePerFireworkBoost = 0;
++    public int elytraDamagePerTridentBoost = 0;
++    private void elytraSettings() {
++        elytraDamagePerSecond = getInt("gameplay-mechanics.elytra.damage-per-second", elytraDamagePerSecond);
++        elytraDamageMultiplyBySpeed = getDouble("gameplay-mechanics.elytra.damage-multiplied-by-speed", elytraDamageMultiplyBySpeed);
++        elytraIgnoreUnbreaking = getBoolean("gameplay-mechanics.elytra.ignore-unbreaking", elytraIgnoreUnbreaking);
++        elytraDamagePerFireworkBoost = getInt("gameplay-mechanics.elytra.damage-per-boost.firework", elytraDamagePerFireworkBoost);
++        elytraDamagePerTridentBoost = getInt("gameplay-mechanics.elytra.damage-per-boost.trident", elytraDamagePerTridentBoost);
++    }
++
+     public String playerDeathExpDropEquation = "expLevel * 7";
+     public int playerDeathExpDropMax = 100;
+     private void playerDeathExpSettings() {

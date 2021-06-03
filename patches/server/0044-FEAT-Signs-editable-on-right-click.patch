@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Fri, 24 May 2019 02:39:25 -0500
+Subject: [PATCH] [FEAT] Signs editable on right click
+
+{EXPLANATION}
+
+$-----------------------------$
+blocks:
+  sign:
+    right-click-edit:
+      default: false
+      description: |-
+        edit signs by right-clicking them with a sign in hand
+
+        Requires the purpur.sign.edit permission
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/level/block/BlockSign.java b/src/main/java/net/minecraft/world/level/block/BlockSign.java
+index 6b461080439dd9ce5b8d34b79d446558bbd5c1f1..19f4403b9f1142c71e7b2c7c0fd5a78027d4ffe4 100644
+--- a/src/main/java/net/minecraft/world/level/block/BlockSign.java
++++ b/src/main/java/net/minecraft/world/level/block/BlockSign.java
+@@ -6,6 +6,7 @@ import net.minecraft.world.EnumHand;
+ import net.minecraft.world.EnumInteractionResult;
+ import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.item.ItemDye;
++import net.minecraft.world.item.ItemSign;
+ import net.minecraft.world.item.ItemStack;
+ import net.minecraft.world.level.GeneratorAccess;
+ import net.minecraft.world.level.IBlockAccess;
+@@ -80,6 +81,17 @@ public abstract class BlockSign extends BlockTileEntity implements IBlockWaterlo
+                     }
+                 }
+ 
++                // Purpur start - right click to open sign editor
++                if (world.purpurConfig.signRightClickEdit && itemstack.getItem() instanceof ItemSign &&
++                        !entityhuman.isSneaking() && entityhuman.abilities.mayBuild &&
++                        entityhuman.getBukkitEntity().hasPermission("purpur.sign.edit")) {
++                    tileentitysign.isEditable = true;
++                    tileentitysign.a(entityhuman);
++                    entityhuman.openSign(tileentitysign);
++                    return EnumInteractionResult.SUCCESS;
++                }
++                // Purpur end
++
+                 return tileentitysign.b(entityhuman) ? EnumInteractionResult.SUCCESS : EnumInteractionResult.PASS;
+             } else {
+                 return EnumInteractionResult.PASS;
+diff --git a/src/main/java/net/minecraft/world/level/block/entity/TileEntitySign.java b/src/main/java/net/minecraft/world/level/block/entity/TileEntitySign.java
+index 7f78f388584899b13ff983f0dc37c679bfb1507e..96d0524482281f8570464962c0fd5319199440d7 100644
+--- a/src/main/java/net/minecraft/world/level/block/entity/TileEntitySign.java
++++ b/src/main/java/net/minecraft/world/level/block/entity/TileEntitySign.java
+@@ -132,6 +132,7 @@ public class TileEntitySign extends TileEntity implements ICommandListener { //
+         return this.isEditable;
+     }
+ 
++    public void setEditor(EntityHuman entityhuman) { a(entityhuman); } // Purpur - OBFHELPER
+     public void a(EntityHuman entityhuman) {
+         // Paper start
+         //this.c = entityhuman;
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index bab91f0416f31a8273593bb7725658674eb41621..ea95a4116371d58eb36be51093af7f0fa28e3dfd 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -109,6 +109,11 @@ public class PurpurWorldConfig {
+         });
+     }
+ 
++    public boolean signRightClickEdit = false;
++    private void signSettings() {
++        signRightClickEdit = getBoolean("blocks.sign.right-click-edit", signRightClickEdit);
++    }
++
+     public boolean turtleEggsBreakFromExpOrbs = true;
+     public boolean turtleEggsBreakFromItems = true;
+     public boolean turtleEggsBreakFromMinecarts = true;

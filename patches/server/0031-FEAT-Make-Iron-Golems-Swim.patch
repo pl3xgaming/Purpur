@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sat, 15 Jun 2019 03:12:15 -0500
+Subject: [PATCH] [FEAT] Make Iron Golems Swim
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  iron_golem:
+    can-swim:
+      default: false
+      description: |-
+        Makes it so iron golems can swim
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityIronGolem.java b/src/main/java/net/minecraft/world/entity/animal/EntityIronGolem.java
+index 5e2b49d120b724cb5a7ae00940ded4f4875ea8a1..62cff5faafa076d05ebc59ad5c4fb020bea0509e 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityIronGolem.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityIronGolem.java
+@@ -30,6 +30,7 @@ import net.minecraft.world.entity.EntityTypes;
+ import net.minecraft.world.entity.IEntityAngerable;
+ import net.minecraft.world.entity.ai.attributes.AttributeProvider;
+ import net.minecraft.world.entity.ai.attributes.GenericAttributes;
++import net.minecraft.world.entity.ai.goal.PathfinderGoalFloat;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalLookAtPlayer;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalMeleeAttack;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalMoveTowardsTarget;
+@@ -70,6 +71,7 @@ public class EntityIronGolem extends EntityGolem implements IEntityAngerable {
+ 
+     @Override
+     protected void initPathfinder() {
++        if (world.purpurConfig.ironGolemCanSwim) this.goalSelector.a(0, new PathfinderGoalFloat(this)); // Purpur
+         this.goalSelector.a(1, new PathfinderGoalMeleeAttack(this, 1.0D, true));
+         this.goalSelector.a(2, new PathfinderGoalMoveTowardsTarget(this, 0.9D, 32.0F));
+         this.goalSelector.a(2, new PathfinderGoalStrollVillage(this, 0.6D, false));
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 6dcfbebd850d71587da5a78a3acf09d8ae413072..decd0e755deede2b092866a8f7f6b46520435bbe 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -154,6 +154,11 @@ public class PurpurWorldConfig {
+         illusionerMaxHealth = getDouble("mobs.illusioner.attributes.max-health", illusionerMaxHealth);
+     }
+ 
++    public boolean ironGolemCanSwim = false;
++    private void ironGolemSettings() {
++        ironGolemCanSwim = getBoolean("mobs.iron_golem.can-swim", ironGolemCanSwim);
++    }
++
+     public double rabbitNaturalToast = 0.0D;
+     public double rabbitNaturalKiller = 0.0D;
+     private void rabbitSettings() {

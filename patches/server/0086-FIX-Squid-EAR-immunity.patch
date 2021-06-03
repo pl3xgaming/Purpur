@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Mon, 13 Jul 2020 13:49:41 -0500
+Subject: [PATCH] [FIX] Squid EAR immunity
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index cd9970db68b6c2f358115b616c36f52ad324fc90..86578f20429aa6bf5f3de1233c6287ce26be9827 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -499,6 +499,11 @@ public class PurpurWorldConfig {
+         snowGolemPutPumpkinBack = getBoolean("mobs.snow_golem.pumpkin-can-be-added-back", snowGolemPutPumpkinBack);
+     }
+ 
++    public boolean squidImmuneToEAR = true;
++    private void squidSettings() {
++        squidImmuneToEAR = getBoolean("mobs.squid.immune-to-EAR", squidImmuneToEAR);
++    }
++
+     public int villagerBrainTicks = 1;
+     public boolean villagerUseBrainTicksOnlyWhenLagging = true;
+     public boolean villagerCanBeLeashed = false;
+diff --git a/src/main/java/org/spigotmc/ActivationRange.java b/src/main/java/org/spigotmc/ActivationRange.java
+index 2bbbd4a7ae87c2ead3dc2fd5520adfaefe2776b8..2fbc24a6907c06bbc12815a89b507d4479be6dc5 100644
+--- a/src/main/java/org/spigotmc/ActivationRange.java
++++ b/src/main/java/org/spigotmc/ActivationRange.java
+@@ -11,6 +11,7 @@ import net.minecraft.world.entity.EntityLiving;
+ import net.minecraft.world.entity.ambient.EntityAmbient;
+ import net.minecraft.world.entity.animal.EntityAnimal;
+ import net.minecraft.world.entity.animal.EntitySheep;
++import net.minecraft.world.entity.animal.EntitySquid;
+ import net.minecraft.world.entity.boss.EntityComplexPart;
+ import net.minecraft.world.entity.boss.enderdragon.EntityEnderCrystal;
+ import net.minecraft.world.entity.boss.enderdragon.EntityEnderDragon;
+@@ -375,6 +376,7 @@ public class ActivationRange
+      */
+     public static boolean checkIfActive(Entity entity)
+     {
++        if (entity.world.purpurConfig.squidImmuneToEAR && entity instanceof EntitySquid) return true; // Purpur
+         // Never safe to skip fireworks or entities not yet added to chunk
+         if ( !entity.inChunk || entity instanceof EntityFireworks ) {
+             return true;

@@ -1,0 +1,127 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Thu, 26 Mar 2020 19:46:44 -0500
+Subject: [PATCH] [FEAT] Breedable Polar Bears
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  polar_bear:
+    breedable-item:
+      default: ""
+      description: |-
+        The item to tempt/feed polar bears and make them breed
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java b/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java
+index 49f26d487229a732902d5bf48d305b0864e90d63..f25f5ced218555af0d62844a78842cfc7599d608 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java
+@@ -34,6 +34,7 @@ import net.minecraft.world.entity.GroupDataEntity;
+ import net.minecraft.world.entity.IEntityAngerable;
+ import net.minecraft.world.entity.ai.attributes.AttributeProvider;
+ import net.minecraft.world.entity.ai.attributes.GenericAttributes;
++import net.minecraft.world.entity.ai.goal.PathfinderGoalBreed;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalFloat;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalFollowParent;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalLookAtPlayer;
+@@ -41,11 +42,13 @@ import net.minecraft.world.entity.ai.goal.PathfinderGoalMeleeAttack;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalPanic;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalRandomLookaround;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalRandomStroll;
++import net.minecraft.world.entity.ai.goal.PathfinderGoalTempt;
+ import net.minecraft.world.entity.ai.goal.target.PathfinderGoalHurtByTarget;
+ import net.minecraft.world.entity.ai.goal.target.PathfinderGoalNearestAttackableTarget;
+ import net.minecraft.world.entity.ai.goal.target.PathfinderGoalUniversalAngerReset;
+ import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.item.ItemStack;
++import net.minecraft.world.item.crafting.RecipeItemStack;
+ import net.minecraft.world.level.GeneratorAccess;
+ import net.minecraft.world.level.World;
+ import net.minecraft.world.level.WorldAccess;
+@@ -68,6 +71,30 @@ public class EntityPolarBear extends EntityAnimal implements IEntityAngerable {
+         super(entitytypes, world);
+     }
+ 
++    // Purpur start
++    @Override
++    public boolean mate(EntityAnimal entityanimal) {
++        if (entityanimal == this) {
++            return false;
++        } else if (this.isStanding()) {
++            return false;
++        } else if (this.getGoalTarget() != null) {
++            return false;
++        } else if (!(entityanimal instanceof EntityPolarBear)) {
++            return false;
++        } else {
++            EntityPolarBear polarbear = (EntityPolarBear) entityanimal;
++            if (polarbear.isStanding()) {
++                return false;
++            }
++            if (polarbear.getGoalTarget() != null) {
++                return false;
++            }
++            return this.isInLove() && polarbear.isInLove();
++        }
++    }
++    // Purpur end
++
+     @Override
+     public EntityAgeable createChild(WorldServer worldserver, EntityAgeable entityageable) {
+         return (EntityAgeable) EntityTypes.POLAR_BEAR.a((World) worldserver);
+@@ -75,7 +102,7 @@ public class EntityPolarBear extends EntityAnimal implements IEntityAngerable {
+ 
+     @Override
+     public boolean k(ItemStack itemstack) {
+-        return false;
++        return world.purpurConfig.polarBearBreedableItem != null && itemstack.getItem() == world.purpurConfig.polarBearBreedableItem; // Purpur;
+     }
+ 
+     @Override
+@@ -84,6 +111,12 @@ public class EntityPolarBear extends EntityAnimal implements IEntityAngerable {
+         this.goalSelector.a(0, new PathfinderGoalFloat(this));
+         this.goalSelector.a(1, new EntityPolarBear.c());
+         this.goalSelector.a(1, new EntityPolarBear.d());
++        // Purpur start
++        if (world.purpurConfig.polarBearBreedableItem != null) {
++            this.goalSelector.a(2, new PathfinderGoalBreed(this, 1.0D));
++            this.goalSelector.a(3, new PathfinderGoalTempt(this, 1.0D, RecipeItemStack.a(world.purpurConfig.polarBearBreedableItem), false));
++        }
++        // Purpur end
+         this.goalSelector.a(4, new PathfinderGoalFollowParent(this, 1.25D));
+         this.goalSelector.a(5, new PathfinderGoalRandomStroll(this, 1.0D));
+         this.goalSelector.a(6, new PathfinderGoalLookAtPlayer(this, EntityHuman.class, 6.0F));
+@@ -225,10 +258,12 @@ public class EntityPolarBear extends EntityAnimal implements IEntityAngerable {
+         return flag;
+     }
+ 
++    public boolean isStanding() { return eM(); } // Purpur - OBFHELPER
+     public boolean eM() {
+         return (Boolean) this.datawatcher.get(EntityPolarBear.bo);
+     }
+ 
++    public void setStanding(boolean standing) { t(standing); } // Purpur - OBFHELPER
+     public void t(boolean flag) {
+         this.datawatcher.set(EntityPolarBear.bo, flag);
+     }
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 081675005077c5070f7745e24fd2ee7400fe2320..fa43c015976aabaae8843983976c9c939a49016f 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -164,6 +164,14 @@ public class PurpurWorldConfig {
+         ironGolemCanSwim = getBoolean("mobs.iron_golem.can-swim", ironGolemCanSwim);
+     }
+ 
++    public String polarBearBreedableItemString = "";
++    public Item polarBearBreedableItem = null;
++    private void polarBearSettings() {
++        polarBearBreedableItemString = getString("mobs.polar_bear.breedable-item", polarBearBreedableItemString);
++        Item item = IRegistry.ITEM.get(new MinecraftKey(polarBearBreedableItemString));
++        if (item != Items.AIR) polarBearBreedableItem = item;
++    }
++
+     public double rabbitNaturalToast = 0.0D;
+     public double rabbitNaturalKiller = 0.0D;
+     private void rabbitSettings() {

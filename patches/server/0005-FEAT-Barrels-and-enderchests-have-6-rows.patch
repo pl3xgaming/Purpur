@@ -1,0 +1,215 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Thu, 23 May 2019 21:50:37 -0500
+Subject: [PATCH] [FEAT] Barrels and enderchests have 6 rows
+
+Adds the ability to increase barrel and enderchest inventory sizes
+from 3 rows to 6 rows. Optionally also adds permission based row
+sizes for enderchests for 1 - 6 rows based on permissions.
+
+$-----------------------------$
+settings:
+  blocks:
+    barrel:
+      six-rows:
+        default: false
+        description: |-
+          Barrels should have 6 rows of inventory space instead of 3
+    ender_chest:
+      six-rows:
+        default: false
+        description: |-
+          Ender chests should have 6 rows of inventory space instead of 3
+      use-permissions-for-rows:
+        default: false
+        description: |-
+          Use permission nodes to determine the number of rows allowed.
+          With this setting enabled all players have six rows by default unless otherwise specified using permissions
+
+          Requires settings.blocks.ender_chest.six-rows to be true
+          Requires the purpur.enderchest.rows.<number> permission
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/inventory/InventoryEnderChest.java b/src/main/java/net/minecraft/world/inventory/InventoryEnderChest.java
+index 85b9eba1dba3de69ab65b0e1c5ebb8740ce6e9e5..97f6ba97a4b2a35c0b8a003e1e27ad38831d859d 100644
+--- a/src/main/java/net/minecraft/world/inventory/InventoryEnderChest.java
++++ b/src/main/java/net/minecraft/world/inventory/InventoryEnderChest.java
+@@ -28,11 +28,34 @@ public class InventoryEnderChest extends InventorySubcontainer {
+     }
+ 
+     public InventoryEnderChest(EntityHuman owner) {
+-        super(27);
++        super(net.pl3x.purpur.PurpurConfig.enderChestSixRows ? 54 : 27); // Purpur
+         this.owner = owner;
+         // CraftBukkit end
+     }
+ 
++    // Purpur start
++    @Override
++    public int getSize() {
++        if (net.pl3x.purpur.PurpurConfig.enderChestSixRows && net.pl3x.purpur.PurpurConfig.enderChestPermissionRows && owner != null && owner.getProfile() != null) {
++            org.bukkit.craftbukkit.entity.CraftHumanEntity bukkit = owner.getBukkitEntity();
++            if (bukkit.hasPermission("purpur.enderchest.rows.six")) {
++                return 54;
++            } else if (bukkit.hasPermission("purpur.enderchest.rows.five")) {
++                return 45;
++            } else if (bukkit.hasPermission("purpur.enderchest.rows.four")) {
++                return 36;
++            } else if (bukkit.hasPermission("purpur.enderchest.rows.three")) {
++                return 27;
++            } else if (bukkit.hasPermission("purpur.enderchest.rows.two")) {
++                return 18;
++            } else if (bukkit.hasPermission("purpur.enderchest.rows.one")) {
++                return 9;
++            }
++        }
++        return super.getSize();
++    }
++    // Purpur end
++
+     public void a(TileEntityEnderChest tileentityenderchest) {
+         this.a = tileentityenderchest;
+     }
+diff --git a/src/main/java/net/minecraft/world/level/block/BlockEnderChest.java b/src/main/java/net/minecraft/world/level/block/BlockEnderChest.java
+index 70d10c492b6ba893d56a463c0e71ac6aa8707f81..34ea9d2aeb9d606d487be796283c9d5ed614a6af 100644
+--- a/src/main/java/net/minecraft/world/level/block/BlockEnderChest.java
++++ b/src/main/java/net/minecraft/world/level/block/BlockEnderChest.java
+@@ -11,6 +11,7 @@ import net.minecraft.world.TileInventory;
+ import net.minecraft.world.entity.monster.piglin.PiglinAI;
+ import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.inventory.ContainerChest;
++import net.minecraft.world.inventory.Containers;
+ import net.minecraft.world.inventory.InventoryEnderChest;
+ import net.minecraft.world.item.context.BlockActionContext;
+ import net.minecraft.world.level.GeneratorAccess;
+@@ -81,6 +82,27 @@ public class BlockEnderChest extends BlockChestAbstract<TileEntityEnderChest> im
+ 
+                 inventoryenderchest.a(tileentityenderchest);
+                 entityhuman.openContainer(new TileInventory((i, playerinventory, entityhuman1) -> {
++                    // Purpur start
++                    if (net.pl3x.purpur.PurpurConfig.enderChestSixRows) {
++                        if (net.pl3x.purpur.PurpurConfig.enderChestPermissionRows) {
++                            org.bukkit.craftbukkit.entity.CraftHumanEntity player = entityhuman.getBukkitEntity();
++                            if (player.hasPermission("purpur.enderchest.rows.six")) {
++                                return new ContainerChest(Containers.GENERIC_9X6, i, playerinventory, inventoryenderchest, 6);
++                            } else if (player.hasPermission("purpur.enderchest.rows.five")) {
++                                return new ContainerChest(Containers.GENERIC_9X5, i, playerinventory, inventoryenderchest, 5);
++                            } else if (player.hasPermission("purpur.enderchest.rows.four")) {
++                                return new ContainerChest(Containers.GENERIC_9X4, i, playerinventory, inventoryenderchest, 4);
++                            } else if (player.hasPermission("purpur.enderchest.rows.three")) {
++                                return new ContainerChest(Containers.GENERIC_9X3, i, playerinventory, inventoryenderchest, 3);
++                            } else if (player.hasPermission("purpur.enderchest.rows.two")) {
++                                return new ContainerChest(Containers.GENERIC_9X2, i, playerinventory, inventoryenderchest, 2);
++                            } else if (player.hasPermission("purpur.enderchest.rows.one")) {
++                                return new ContainerChest(Containers.GENERIC_9X1, i, playerinventory, inventoryenderchest, 1);
++                            }
++                        }
++                        return new ContainerChest(Containers.GENERIC_9X6, i, playerinventory, inventoryenderchest, 6);
++                    }
++                    // Purpur end
+                     return ContainerChest.a(i, playerinventory, inventoryenderchest);
+                 }, BlockEnderChest.e));
+                 entityhuman.a(StatisticList.OPEN_ENDERCHEST);
+diff --git a/src/main/java/net/minecraft/world/level/block/entity/TileEntityBarrel.java b/src/main/java/net/minecraft/world/level/block/entity/TileEntityBarrel.java
+index 7a6f150490bc3ef8a5ed43c401fd70bcc67f40f0..449d2c38abdd35b782a6732006eebb381815bcba 100644
+--- a/src/main/java/net/minecraft/world/level/block/entity/TileEntityBarrel.java
++++ b/src/main/java/net/minecraft/world/level/block/entity/TileEntityBarrel.java
+@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.entity.player.PlayerInventory;
+ import net.minecraft.world.inventory.Container;
+ import net.minecraft.world.inventory.ContainerChest;
++import net.minecraft.world.inventory.Containers;
+ import net.minecraft.world.item.ItemStack;
+ import net.minecraft.world.level.block.BlockBarrel;
+ import net.minecraft.world.level.block.Blocks;
+@@ -68,7 +69,7 @@ public class TileEntityBarrel extends TileEntityLootable {
+ 
+     private TileEntityBarrel(TileEntityTypes<?> tileentitytypes) {
+         super(tileentitytypes);
+-        this.items = NonNullList.a(27, ItemStack.b);
++        this.items = NonNullList.a(net.pl3x.purpur.PurpurConfig.barrelSixRows ? 54 : 27, ItemStack.b); // Purpur
+     }
+ 
+     public TileEntityBarrel() {
+@@ -97,7 +98,7 @@ public class TileEntityBarrel extends TileEntityLootable {
+ 
+     @Override
+     public int getSize() {
+-        return 27;
++        return net.pl3x.purpur.PurpurConfig.barrelSixRows ? 54 : 27; // Purpur
+     }
+ 
+     @Override
+@@ -117,6 +118,7 @@ public class TileEntityBarrel extends TileEntityLootable {
+ 
+     @Override
+     protected Container createContainer(int i, PlayerInventory playerinventory) {
++        if (net.pl3x.purpur.PurpurConfig.barrelSixRows) return new ContainerChest(Containers.GENERIC_9X6, i, playerinventory, this, 6); // Purpur
+         return ContainerChest.a(i, playerinventory, this);
+     }
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 108be36fc37c04eece6ccb93d19e58a31326ceb0..2f329bae9f09d0ed21a4538fba6b95919ec35887 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -7,6 +7,7 @@ import org.bukkit.Bukkit;
+ import org.bukkit.command.Command;
+ import org.bukkit.configuration.InvalidConfigurationException;
+ import org.bukkit.configuration.file.YamlConfiguration;
++import org.bukkit.event.inventory.InventoryType;
+ 
+ import java.io.File;
+ import java.io.IOException;
+@@ -133,4 +134,23 @@ public class PurpurConfig {
+         timingsUrl = getString("settings.timings.url", timingsUrl);
+         if (!TimingsManager.hiddenConfigs.contains("server-ip")) TimingsManager.hiddenConfigs.add("server-ip");
+     }
++
++    public static boolean barrelSixRows = false;
++    public static boolean enderChestSixRows = false;
++    public static boolean enderChestPermissionRows = false;
++    private static void blockSettings() {
++        if (version < 3) {
++            boolean oldValue = getBoolean("settings.barrel.packed-barrels", true);
++            set("settings.blocks.barrel.six-rows", oldValue);
++            set("settings.packed-barrels", null);
++            oldValue = getBoolean("settings.large-ender-chests", true);
++            set("settings.blocks.ender_chest.six-rows", oldValue);
++            set("settings.large-ender-chests", null);
++        }
++        barrelSixRows = getBoolean("settings.blocks.barrel.six-rows", barrelSixRows);
++        InventoryType.BARREL.setDefaultSize(barrelSixRows ? 54 : 27);
++        enderChestSixRows = getBoolean("settings.blocks.ender_chest.six-rows", enderChestSixRows);
++        InventoryType.ENDER_CHEST.setDefaultSize(enderChestSixRows ? 54 : 27);
++        enderChestPermissionRows = getBoolean("settings.blocks.ender_chest.use-permissions-for-rows", enderChestPermissionRows);
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftContainer.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftContainer.java
+index 614ab2d73db2293116f2272f6cd5c16da446132d..2885dc250f171917393c0356a005b476b23f9c5f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftContainer.java
++++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftContainer.java
+@@ -212,8 +212,10 @@ public class CraftContainer extends Container {
+             case PLAYER:
+             case CHEST:
+             case ENDER_CHEST:
++                delegate = new ContainerChest(net.pl3x.purpur.PurpurConfig.enderChestSixRows ? Containers.GENERIC_9X6 : Containers.GENERIC_9X3, windowId, bottom, top, top.getSize() / 9); // Purpur
++                break; // Purpur
+             case BARREL:
+-                delegate = new ContainerChest(Containers.GENERIC_9X3, windowId, bottom, top, top.getSize() / 9);
++                delegate = new ContainerChest(net.pl3x.purpur.PurpurConfig.barrelSixRows ? Containers.GENERIC_9X6 : Containers.GENERIC_9X3, windowId, bottom, top, top.getSize() / 9); // Purpur
+                 break;
+             case DISPENSER:
+             case DROPPER:
+diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftInventory.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftInventory.java
+index f6001047ada8308cfa1d9b26677a7a5d7774de51..922a15097bdfe64be657fdf157145d1e882b6a40 100644
+--- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftInventory.java
++++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftInventory.java
+@@ -82,7 +82,7 @@ public class CraftInventory implements Inventory {
+ 
+     @Override
+     public void setContents(ItemStack[] items) {
+-        if (getSize() < items.length) {
++        if (false && getSize() < items.length) { // Purpur
+             throw new IllegalArgumentException("Invalid inventory size; expected " + getSize() + " or less");
+         }
+ 

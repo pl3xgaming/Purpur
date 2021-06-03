@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sun, 7 Jul 2019 19:52:16 -0500
+Subject: [PATCH] [FEAT] Zombie horse naturally spawn
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  zombie_horse:
+    spawn-chance:
+      default: 0.0
+      description: |-
+        Percent chance (0.0 - 1.0) a zombie horse will spawn instead of a skeleton horse during thunderstorms
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/level/WorldServer.java b/src/main/java/net/minecraft/server/level/WorldServer.java
+index a97b8d8116920237964cc3a887525f8c3804c640..a0c731af6dffa30832b321f8fd86cef76ec06522 100644
+--- a/src/main/java/net/minecraft/server/level/WorldServer.java
++++ b/src/main/java/net/minecraft/server/level/WorldServer.java
+@@ -96,6 +96,7 @@ import net.minecraft.world.entity.ai.village.poi.VillagePlace;
+ import net.minecraft.world.entity.ai.village.poi.VillagePlaceType;
+ import net.minecraft.world.entity.animal.EntityAnimal;
+ import net.minecraft.world.entity.animal.EntityWaterAnimal;
++import net.minecraft.world.entity.animal.horse.EntityHorseAbstract;
+ import net.minecraft.world.entity.animal.horse.EntityHorseSkeleton;
+ import net.minecraft.world.entity.boss.EntityComplexPart;
+ import net.minecraft.world.entity.boss.enderdragon.EntityEnderDragon;
+@@ -1219,12 +1220,18 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+                 boolean flag1 = this.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && this.random.nextDouble() < (double) difficultydamagescaler.b() * paperConfig.skeleHorseSpawnChance; // Paper
+ 
+                 if (flag1) {
+-                    EntityHorseSkeleton entityhorseskeleton = (EntityHorseSkeleton) EntityTypes.SKELETON_HORSE.a((World) this);
+-
+-                    entityhorseskeleton.t(true);
+-                    entityhorseskeleton.setAgeRaw(0);
+-                    entityhorseskeleton.setPosition((double) blockposition.getX(), (double) blockposition.getY(), (double) blockposition.getZ());
+-                    this.addEntity(entityhorseskeleton, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.LIGHTNING); // CraftBukkit
++                    // Purpur start
++                    EntityHorseAbstract horse;
++                    if (purpurConfig.zombieHorseSpawnChance > 0D && random.nextDouble() <= purpurConfig.zombieHorseSpawnChance) {
++                        horse = EntityTypes.ZOMBIE_HORSE.create(this);
++                    } else {
++                        horse = EntityTypes.SKELETON_HORSE.create(this);
++                        ((EntityHorseSkeleton) horse).setTrap(true);
++                    }
++                    horse.setAgeRaw(0);
++                    horse.setPosition(blockposition.getX(), blockposition.getY(), blockposition.getZ());
++                    addEntity(horse, CreatureSpawnEvent.SpawnReason.LIGHTNING); // CraftBukkit
++                    // Purpur end
+                 }
+ 
+                 EntityLightning entitylightning = (EntityLightning) EntityTypes.LIGHTNING_BOLT.a((World) this);
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index d6bd971a62af7341f8dc8b3afe32786ced6fcd41..81b0e17a4bc5022ea757f03c2546808148d6e957 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -155,4 +155,9 @@ public class PurpurWorldConfig {
+         villagerBrainTicks = getInt("mobs.villager.brain-ticks", villagerBrainTicks);
+         villagerUseBrainTicksOnlyWhenLagging = getBoolean("mobs.villager.use-brain-ticks-only-when-lagging", villagerUseBrainTicksOnlyWhenLagging);
+     }
++
++    public double zombieHorseSpawnChance = 0.0D;
++    private void zombieHorseSettings() {
++        zombieHorseSpawnChance = getDouble("mobs.zombie_horse.spawn-chance", zombieHorseSpawnChance);
++    }
+ }

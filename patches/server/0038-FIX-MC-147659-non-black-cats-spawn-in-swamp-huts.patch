@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Thu, 2 Jan 2020 01:23:22 -0600
+Subject: [PATCH] [FIX] MC-147659 non black cats spawn in swamp huts
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/world/entity/npc/MobSpawnerCat.java b/src/main/java/net/minecraft/world/entity/npc/MobSpawnerCat.java
+index 2f54c26151c049df9d071c887dd33e48df041437..5d0da07970bfe304debe244e5df39981f90161f6 100644
+--- a/src/main/java/net/minecraft/world/entity/npc/MobSpawnerCat.java
++++ b/src/main/java/net/minecraft/world/entity/npc/MobSpawnerCat.java
+@@ -98,8 +98,9 @@ public class MobSpawnerCat implements MobSpawner {
+         if (entitycat == null) {
+             return 0;
+         } else {
++            entitycat.setPositionRotation(blockposition, 0.0F, 0.0F); // Purpur
+             entitycat.prepare(worldserver, worldserver.getDamageScaler(blockposition), EnumMobSpawn.NATURAL, (GroupDataEntity) null, (NBTTagCompound) null);
+-            entitycat.setPositionRotation(blockposition, 0.0F, 0.0F);
++            //entitycat.setPositionRotation(blockposition, 0.0F, 0.0F); // Purpur - move up - fixes non black cat types spawning inside swamp huts
+             worldserver.addAllEntities(entitycat);
+             return 1;
+         }

@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Tue, 18 Feb 2020 20:07:08 -0600
+Subject: [PATCH] [FEAT] [PERF] Add canSaveToDisk to Entity
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
+index f9e2a7c4a7b427470a586d54c8ab9e1b3b03cf09..c9d04e8a617c3535ff390dd685776a37d952ce93 100644
+--- a/src/main/java/net/minecraft/world/entity/Entity.java
++++ b/src/main/java/net/minecraft/world/entity/Entity.java
+@@ -444,6 +444,12 @@ public abstract class Entity implements INamableTileEntity, ICommandListener, ne
+         this.headHeight = this.getHeadHeight(EntityPose.STANDING, this.size);
+     }
+ 
++    // Purpur start
++    public boolean canSaveToDisk() {
++        return true;
++    }
++    // Purpur end
++
+     public boolean isSpectator() {
+         return false;
+     }
+diff --git a/src/main/java/net/minecraft/world/level/chunk/storage/ChunkRegionLoader.java b/src/main/java/net/minecraft/world/level/chunk/storage/ChunkRegionLoader.java
+index ec2b238480413ba9c123d9ddeaa787d9520e1b74..3fbeb01275a48b4173f98ae0c7f09e4c0e6445e7 100644
+--- a/src/main/java/net/minecraft/world/level/chunk/storage/ChunkRegionLoader.java
++++ b/src/main/java/net/minecraft/world/level/chunk/storage/ChunkRegionLoader.java
+@@ -580,6 +580,7 @@ public class ChunkRegionLoader {
+ 
+                 while (iterator1.hasNext()) {
+                     Entity entity = (Entity) iterator1.next();
++                    if (!entity.canSaveToDisk()) continue; // Purpur
+                     final EntityTypes<?> entityType = entity.getEntityType();
+                     final int saveLimit = worldserver.paperConfig.entityPerChunkSaveLimits.getOrDefault(entityType, -1);
+                     if (saveLimit > -1) {

@@ -1,0 +1,121 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sat, 13 Jul 2019 15:56:22 -0500
+Subject: [PATCH] [FEAT] Tulips change fox type
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  fox:
+    tulips-change-type:
+      default: false
+      description: |-
+        Feeding a white/orange tulip changes the fox's type to snow/regular
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityFox.java b/src/main/java/net/minecraft/world/entity/animal/EntityFox.java
+index b7fa24318ef43918b6b10ff4ea8acb960527296e..19a9affdaba52d8e7dc1c4c20d5c0d52829f4989 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityFox.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityFox.java
+@@ -30,6 +30,8 @@ import net.minecraft.tags.Tag;
+ import net.minecraft.tags.TagsFluid;
+ import net.minecraft.util.MathHelper;
+ import net.minecraft.world.DifficultyDamageScaler;
++import net.minecraft.world.EnumHand;
++import net.minecraft.world.EnumInteractionResult;
+ import net.minecraft.world.damagesource.DamageSource;
+ import net.minecraft.world.entity.Entity;
+ import net.minecraft.world.entity.EntityAgeable;
+@@ -107,9 +109,9 @@ public class EntityFox extends EntityAnimal {
+     private static final Predicate<Entity> bv = (entity) -> {
+         return !entity.bx() && IEntitySelector.e.test(entity);
+     };
+-    private PathfinderGoal bw;
+-    private PathfinderGoal bx;
+-    private PathfinderGoal by;
++    private PathfinderGoal bw; private PathfinderGoal attackAnimalGoal() { return bw; } // Purpur - OBFHELPER
++    private PathfinderGoal bx; private PathfinderGoal attackTurtleGoal() { return bx; } // Purpur - OBFHELPER
++    private PathfinderGoal by; private PathfinderGoal attackFishGoal() { return by; } // Purpur - OBFHELPER
+     private float bz;
+     private float bA;
+     private float bB;
+@@ -297,6 +299,11 @@ public class EntityFox extends EntityAnimal {
+     }
+ 
+     private void initializePathFinderGoals() {
++        // Purpur start - do not add duplicate goals
++        this.targetSelector.a(attackAnimalGoal());
++        this.targetSelector.a(attackTurtleGoal());
++        this.targetSelector.a(attackFishGoal());
++        // Purpur end
+         if (this.getFoxType() == EntityFox.Type.RED) {
+             this.targetSelector.a(4, this.bw);
+             this.targetSelector.a(4, this.bx);
+@@ -329,6 +336,7 @@ public class EntityFox extends EntityAnimal {
+ 
+     public void setFoxType(EntityFox.Type entityfox_type) {
+         this.datawatcher.set(EntityFox.bo, entityfox_type.b());
++        initializePathFinderGoals(); // Purpur - fix API bug not updating pathfinders on type change
+     }
+ 
+     private List<UUID> fa() {
+@@ -646,6 +654,27 @@ public class EntityFox extends EntityAnimal {
+         return this.fa().contains(uuid);
+     }
+ 
++    @Override
++    public EnumInteractionResult b(EntityHuman entityhuman, EnumHand enumhand) {
++        if (world.purpurConfig.foxTypeChangesWithTulips) {
++            ItemStack itemstack = entityhuman.b(enumhand);
++            if (getFoxType() == Type.RED && itemstack.getItem() == Items.whiteTulip()) {
++                setFoxType(Type.SNOW);
++                if (!entityhuman.abilities.canInstantlyBuild) {
++                    itemstack.subtract(1);
++                }
++                return EnumInteractionResult.SUCCESS;
++            } else if (getFoxType() == Type.SNOW && itemstack.getItem() == Items.orangeTulip()) {
++                setFoxType(Type.RED);
++                if (!entityhuman.abilities.canInstantlyBuild) {
++                    itemstack.subtract(1);
++                }
++                return EnumInteractionResult.SUCCESS;
++            }
++        }
++        return super.b(entityhuman, enumhand);
++    }
++
+     @Override
+     protected org.bukkit.event.entity.EntityDeathEvent d(DamageSource damagesource) { // Paper
+         ItemStack itemstack = this.getEquipment(EnumItemSlot.MAINHAND).cloneItemStack(); // Paper
+diff --git a/src/main/java/net/minecraft/world/item/Items.java b/src/main/java/net/minecraft/world/item/Items.java
+index 8e9a25495d76251a86268d3059e2960a86dc46b3..993a88a5937417016821ef9d7cd58e4ee097491c 100644
+--- a/src/main/java/net/minecraft/world/item/Items.java
++++ b/src/main/java/net/minecraft/world/item/Items.java
+@@ -133,8 +133,8 @@ public class Items {
+     public static final Item bk = a(Blocks.ALLIUM, CreativeModeTab.c);
+     public static final Item bl = a(Blocks.AZURE_BLUET, CreativeModeTab.c);
+     public static final Item bm = a(Blocks.RED_TULIP, CreativeModeTab.c);
+-    public static final Item bn = a(Blocks.ORANGE_TULIP, CreativeModeTab.c);
+-    public static final Item bo = a(Blocks.WHITE_TULIP, CreativeModeTab.c);
++    public static final Item bn = a(Blocks.ORANGE_TULIP, CreativeModeTab.c); public static Item orangeTulip() { return bn; } // Purpur - OBFHELPER
++    public static final Item bo = a(Blocks.WHITE_TULIP, CreativeModeTab.c); public static Item whiteTulip() { return bo; } // Purpur - OBFHELPER
+     public static final Item bp = a(Blocks.PINK_TULIP, CreativeModeTab.c);
+     public static final Item bq = a(Blocks.OXEYE_DAISY, CreativeModeTab.c);
+     public static final Item br = a(Blocks.CORNFLOWER, CreativeModeTab.c);
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index decd0e755deede2b092866a8f7f6b46520435bbe..081675005077c5070f7745e24fd2ee7400fe2320 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -118,6 +118,11 @@ public class PurpurWorldConfig {
+         creeperChargedChance = getDouble("mobs.creeper.naturally-charged-chance", creeperChargedChance);
+     }
+ 
++    public boolean foxTypeChangesWithTulips = false;
++    private void foxSettings() {
++        foxTypeChangesWithTulips = getBoolean("mobs.fox.tulips-change-type", foxTypeChangesWithTulips);
++    }
++
+     public float giantStepHeight = 2.0F;
+     public float giantJumpHeight = 1.0F;
+     public double giantMovementSpeed = 0.5D;

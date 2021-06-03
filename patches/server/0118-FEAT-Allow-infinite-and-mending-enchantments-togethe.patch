@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Tue, 13 Oct 2020 20:04:33 -0500
+Subject: [PATCH] [FEAT] Allow infinite and mending enchantments together
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/world/item/enchantment/EnchantmentInfiniteArrows.java b/src/main/java/net/minecraft/world/item/enchantment/EnchantmentInfiniteArrows.java
+index bf9d6d0e593951aa5abc9aef6cf4803430ea18e5..29bebbccf8dd6ff8976d1bfdb4c2ddcfc9de57dc 100644
+--- a/src/main/java/net/minecraft/world/item/enchantment/EnchantmentInfiniteArrows.java
++++ b/src/main/java/net/minecraft/world/item/enchantment/EnchantmentInfiniteArrows.java
+@@ -25,6 +25,6 @@ public class EnchantmentInfiniteArrows extends Enchantment {
+ 
+     @Override
+     public boolean a(Enchantment enchantment) {
+-        return enchantment instanceof EnchantmentMending ? false : super.a(enchantment);
++        return enchantment instanceof EnchantmentMending ? net.pl3x.purpur.PurpurConfig.allowInfinityMending : super.a(enchantment); // Purpur
+     }
+ }
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 318caff699e2a1656ef9428641f898f0508a1df7..f068f0d4101b63b728809dca8dd322c45c793e04 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -198,6 +198,16 @@ public class PurpurConfig {
+         cryingObsidianValidForPortalFrame = getBoolean("settings.blocks.crying_obsidian.valid-for-portal-frame", cryingObsidianValidForPortalFrame);
+     }
+ 
++    public static boolean allowInfinityMending = false;
++    private static void enchantmentSettings() {
++        if (version < 5) {
++            boolean oldValue = getBoolean("settings.enchantment.allow-infinite-and-mending-together", false);
++            set("settings.enchantment.allow-infinity-and-mending-together", oldValue);
++            set("settings.enchantment.allow-infinite-and-mending-together", null);
++        }
++        allowInfinityMending = getBoolean("settings.enchantment.allow-infinity-and-mending-together", allowInfinityMending);
++    }
++
+     public static boolean endermanShortHeight = false;
+     private static void entitySettings() {
+         endermanShortHeight = getBoolean("settings.entity.enderman.short-height", endermanShortHeight);

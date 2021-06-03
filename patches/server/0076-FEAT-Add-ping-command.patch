@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Fri, 13 Mar 2020 22:29:10 -0500
+Subject: [PATCH] [FEAT] Add /ping command
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+{EXPLANATION}
+
+$-----------------------------$
+settings:
+  messages:
+    ping-command-output:
+      permission: bukkit.command.ping
+      default: "§a%s's ping is %sms"
+      description: |-
+        The output when `/ping <player>` is ran.
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/commands/CommandDispatcher.java b/src/main/java/net/minecraft/commands/CommandDispatcher.java
+index b1bfc42b4153b225243ba65e7f937c0314cb39a5..185dee82b86aa3abb04809ddcf31c81e29664c62 100644
+--- a/src/main/java/net/minecraft/commands/CommandDispatcher.java
++++ b/src/main/java/net/minecraft/commands/CommandDispatcher.java
+@@ -191,6 +191,7 @@ public class CommandDispatcher {
+             CommandIdleTimeout.a(this.b);
+             CommandStop.a(this.b);
+             CommandWhitelist.a(this.b);
++            net.pl3x.purpur.command.PingCommand.register(getDispatcher()); // Purpur
+         }
+ 
+         if (commanddispatcher_servertype.d) {
+@@ -428,10 +429,12 @@ public class CommandDispatcher {
+ 
+     }
+ 
++    public static LiteralArgumentBuilder<CommandListenerWrapper> literal(String s) { return a(s); } // Purpur - OBFHELPER
+     public static LiteralArgumentBuilder<CommandListenerWrapper> a(String s) {
+         return LiteralArgumentBuilder.literal(s);
+     }
+ 
++    public static <T> RequiredArgumentBuilder<CommandListenerWrapper, T> argument(String s, ArgumentType<T> argumenttype) { return a(s, argumenttype); } // Purpur - OBFHELPER
+     public static <T> RequiredArgumentBuilder<CommandListenerWrapper, T> a(String s, ArgumentType<T> argumenttype) {
+         return RequiredArgumentBuilder.argument(s, argumenttype);
+     }
+@@ -447,6 +450,7 @@ public class CommandDispatcher {
+         };
+     }
+ 
++    public com.mojang.brigadier.CommandDispatcher<CommandListenerWrapper> getDispatcher() { return a(); } // Purpur - OBFHELPER
+     public com.mojang.brigadier.CommandDispatcher<CommandListenerWrapper> a() { return this.dispatcher(); } public com.mojang.brigadier.CommandDispatcher<CommandListenerWrapper> dispatcher() { // Paper - OBFHELPER
+         return this.b;
+     }
+diff --git a/src/main/java/net/minecraft/commands/CommandListenerWrapper.java b/src/main/java/net/minecraft/commands/CommandListenerWrapper.java
+index 8402af32cc476d7f468842eb4f34c7521d72bcc8..4480fe75cfad35a5104b5116c5ec2c80d18f15f5 100644
+--- a/src/main/java/net/minecraft/commands/CommandListenerWrapper.java
++++ b/src/main/java/net/minecraft/commands/CommandListenerWrapper.java
+@@ -211,6 +211,7 @@ public class CommandListenerWrapper implements ICompletionProvider, com.destroys
+         }
+     }
+ 
++    public EntityPlayer getPlayerOrException() throws CommandSyntaxException { return h(); } // Purpur - OBFHELPER
+     public EntityPlayer h() throws CommandSyntaxException {
+         if (!(this.k instanceof EntityPlayer)) {
+             throw CommandListenerWrapper.a.create();
+diff --git a/src/main/java/net/minecraft/commands/arguments/ArgumentEntity.java b/src/main/java/net/minecraft/commands/arguments/ArgumentEntity.java
+index bbad2b1399d9d2e16bfa77563bd564f7c6f640d7..a85c4525335fa46bc23a6dd57cfaea1f697b3daa 100644
+--- a/src/main/java/net/minecraft/commands/arguments/ArgumentEntity.java
++++ b/src/main/java/net/minecraft/commands/arguments/ArgumentEntity.java
+@@ -78,10 +78,12 @@ public class ArgumentEntity implements ArgumentType<EntitySelector> {
+         return ((EntitySelector) commandcontext.getArgument(s, EntitySelector.class)).c((CommandListenerWrapper) commandcontext.getSource());
+     }
+ 
++    public static ArgumentEntity players() { return d(); } // Purpur - OBFHELPER
+     public static ArgumentEntity d() {
+         return new ArgumentEntity(false, true);
+     }
+ 
++    public static Collection<EntityPlayer> getPlayers(CommandContext<CommandListenerWrapper> commandcontext, String s) throws CommandSyntaxException { return f(commandcontext, s); } // Purpur - OBFHELPER
+     public static Collection<EntityPlayer> f(CommandContext<CommandListenerWrapper> commandcontext, String s) throws CommandSyntaxException {
+         List<EntityPlayer> list = ((EntitySelector) commandcontext.getArgument(s, EntitySelector.class)).d((CommandListenerWrapper) commandcontext.getSource());
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 8d27fff773b74014351bfbfeed0197272234be4a..b1b12a46f0b662aff24357b407b65124428ecfaa 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -133,10 +133,12 @@ public class PurpurConfig {
+     public static String afkBroadcastAway = "§e§o%s is now AFK";
+     public static String afkBroadcastBack = "§e§o%s is no longer AFK";
+     public static String afkTabListPrefix = "[AFK] ";
++    public static String pingCommandOutput = "§a%s's ping is %sms";
+     private static void messages() {
+         afkBroadcastAway = getString("settings.messages.afk-broadcast-away", afkBroadcastAway);
+         afkBroadcastBack = getString("settings.messages.afk-broadcast-back", afkBroadcastBack);
+         afkTabListPrefix = getString("settings.messages.afk-tab-list-prefix", afkTabListPrefix);
++        pingCommandOutput = getString("settings.messages.ping-command-output", pingCommandOutput);
+     }
+ 
+     public static String serverModName = "Purpur";
+diff --git a/src/main/java/net/pl3x/purpur/command/PingCommand.java b/src/main/java/net/pl3x/purpur/command/PingCommand.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..1d636d7c541d127a473d5be2509e5db29936e8ad
+--- /dev/null
++++ b/src/main/java/net/pl3x/purpur/command/PingCommand.java
+@@ -0,0 +1,37 @@
++package net.pl3x.purpur.command;
++
++import net.minecraft.commands.arguments.ArgumentEntity;
++import net.minecraft.commands.CommandDispatcher;
++import net.minecraft.commands.CommandListenerWrapper;
++import net.minecraft.server.level.EntityPlayer;
++import net.pl3x.purpur.PurpurConfig;
++import org.bukkit.craftbukkit.util.CraftChatMessage;
++
++import java.util.Collection;
++import java.util.Collections;
++
++public class PingCommand {
++    public static void register(com.mojang.brigadier.CommandDispatcher<CommandListenerWrapper> dispatcher) {
++        dispatcher.register(CommandDispatcher.literal("ping")
++                .requires((listener) -> {
++                    return listener.hasPermission(2);
++                })
++                .executes((context) -> {
++                    return execute(context.getSource(), Collections.singleton(context.getSource().getPlayerOrException()));
++                })
++                .then(CommandDispatcher.argument("targets", ArgumentEntity.players())
++                        .executes((context) -> {
++                            return execute(context.getSource(), ArgumentEntity.getPlayers(context, "targets"));
++                        })
++                )
++        ).setPermission("bukkit.command.ping");
++    }
++
++    private static int execute(CommandListenerWrapper sender, Collection<EntityPlayer> targets) {
++        for (EntityPlayer player : targets) {
++            String output = String.format(PurpurConfig.pingCommandOutput, player.getProfile().getName(), player.ping);
++            sender.sendMessage(CraftChatMessage.fromStringOrNull(output), false);
++        }
++        return targets.size();
++    }
++}

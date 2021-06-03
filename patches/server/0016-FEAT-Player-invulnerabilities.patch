@@ -1,0 +1,148 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Sat, 2 May 2020 20:55:44 -0500
+Subject: [PATCH] [FEAT] Player invulnerabilities
+
+{EXPLANATION}
+
+$-----------------------------$
+gameplay-mechanics:
+  player:
+    spawn-invulnerable-ticks:
+      default: 60
+      description: |-
+        How long in ticks a player is invulnerable when they first spawn in
+    invulnerable-while-accepting-resource-pack:
+      default: false
+      description: |-
+        Sets the player as invulnerable while they download the resource pack
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/level/EntityPlayer.java b/src/main/java/net/minecraft/server/level/EntityPlayer.java
+index b302d1f7c86a8df2ede46871397189f6f2e6b912..79ff69f9e2dc92ffb4880cf1e059cd1d6a7bdc8a 100644
+--- a/src/main/java/net/minecraft/server/level/EntityPlayer.java
++++ b/src/main/java/net/minecraft/server/level/EntityPlayer.java
+@@ -285,6 +285,8 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+         this.canPickUpLoot = true;
+         this.maxHealthCache = this.getMaxHealth();
+         this.cachedSingleMobDistanceMap = new com.destroystokyo.paper.util.PooledHashSets.PooledObjectLinkedOpenHashSet<>(this); // Paper
++
++        this.invulnerableTicks = world.purpurConfig.playerSpawnInvulnerableTicks; // Purpur
+     }
+     // Paper start
+     public BlockPosition getPointInFront(double inFront) {
+@@ -1129,6 +1131,12 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+ 
+     }
+ 
++    // Purpur start
++    public boolean isSpawnInvulnerable() {
++        return invulnerableTicks > 0 || frozen;
++    }
++    // Purpur end
++
+     @Override
+     public boolean damageEntity(DamageSource damagesource, float f) {
+         if (this.isInvulnerable(damagesource)) {
+@@ -1136,7 +1144,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+         } else {
+             boolean flag = this.server.j() && this.canPvP() && "fall".equals(damagesource.translationIndex);
+ 
+-            if (!flag && this.invulnerableTicks > 0 && damagesource != DamageSource.OUT_OF_WORLD) {
++            if (!flag && isSpawnInvulnerable() && damagesource != DamageSource.OUT_OF_WORLD) { // Purpur
+                 return false;
+             } else {
+                 if (damagesource instanceof EntityDamageSource) {
+@@ -1313,6 +1321,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+             }
+             // Paper end
+ 
++            this.invulnerableTicks = worldserver.purpurConfig.playerSpawnInvulnerableTicks; // Purpur
+             return this;
+         }
+     }
+@@ -2521,9 +2530,17 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+ 
+     @Override
+     public boolean isFrozen() { // Paper - protected > public
+-        return super.isFrozen() || (this.playerConnection != null && this.playerConnection.isDisconnected()); // Paper
++        return super.isFrozen() || frozen || (this.playerConnection != null && this.playerConnection.isDisconnected()); // Paper // Purpur
+     }
+ 
++    // Purpur start
++    private boolean frozen = false;
++
++    public void setFrozen(boolean frozen) {
++        this.frozen = frozen;
++    }
++    // Purpur end
++
+     @Override
+     public Scoreboard getScoreboard() {
+         return getBukkitEntity().getScoreboard().getHandle();
+diff --git a/src/main/java/net/minecraft/server/network/PlayerConnection.java b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+index de72ebb94052efe8c63bf28f6741a4645b3ee721..d1fe1242272a422b7b528876da0d76e1aa6f3eaa 100644
+--- a/src/main/java/net/minecraft/server/network/PlayerConnection.java
++++ b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+@@ -1910,6 +1910,7 @@ public class PlayerConnection implements PacketListenerPlayIn {
+         PlayerConnectionUtils.ensureMainThread(packetplayinresourcepackstatus, this, this.player.getWorldServer());
+         // Paper start
+         PlayerResourcePackStatusEvent.Status packStatus = PlayerResourcePackStatusEvent.Status.values()[packetplayinresourcepackstatus.status.ordinal()];
++        if (player.world.purpurConfig.playerInvulnerableWhileAcceptingResourcePack) player.setFrozen(packStatus == PlayerResourcePackStatusEvent.Status.ACCEPTED); // Purpur
+         player.getBukkitEntity().setResourcePackStatus(packStatus);
+         this.server.getPluginManager().callEvent(new PlayerResourcePackStatusEvent(getPlayer(), packStatus));
+         // Paper end
+diff --git a/src/main/java/net/minecraft/server/players/PlayerList.java b/src/main/java/net/minecraft/server/players/PlayerList.java
+index 5936075251ef3d6dda3e93866009d0e996598698..5897e4e02dad470174a31d3710520d04d4b87fb4 100644
+--- a/src/main/java/net/minecraft/server/players/PlayerList.java
++++ b/src/main/java/net/minecraft/server/players/PlayerList.java
+@@ -1015,6 +1015,8 @@ public abstract class PlayerList {
+         }
+         // Paper end
+ 
++        entityplayer1.invulnerableTicks = entityplayer1.world.purpurConfig.playerSpawnInvulnerableTicks; // Purpur
++
+         // CraftBukkit end
+         return entityplayer1;
+     }
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 2578a4677d1ee060f687be531e696b7c7be89e84..c441fcea9b2b5a77b801c8a69541cf42050927dc 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -67,4 +67,11 @@ public class PurpurWorldConfig {
+         idleTimeoutCountAsSleeping = getBoolean("gameplay-mechanics.player.idle-timeout.count-as-sleeping", idleTimeoutCountAsSleeping);
+         idleTimeoutUpdateTabList = getBoolean("gameplay-mechanics.player.idle-timeout.update-tab-list", idleTimeoutUpdateTabList);
+     }
++
++    public int playerSpawnInvulnerableTicks = 60;
++    public boolean playerInvulnerableWhileAcceptingResourcePack = false;
++    private void playerInvulnerabilities() {
++        playerSpawnInvulnerableTicks = getInt("gameplay-mechanics.player.spawn-invulnerable-ticks", playerSpawnInvulnerableTicks);
++        playerInvulnerableWhileAcceptingResourcePack = getBoolean("gameplay-mechanics.player.invulnerable-while-accepting-resource-pack", playerInvulnerableWhileAcceptingResourcePack);
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index f3fb405c92a35796baa30cafcd96df2d8bf162e6..b7180dea1d71a68e4025388916600093dfd000c7 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -2515,5 +2515,20 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+     public void resetIdleTimer() {
+         getHandle().resetIdleTimer();
+     }
++
++    @Override
++    public boolean isSpawnInvulnerable() {
++        return getHandle().isSpawnInvulnerable();
++    }
++
++    @Override
++    public int getSpawnInvulnerableTicks() {
++        return getHandle().invulnerableTicks;
++    }
++
++    @Override
++    public void setSpawnInvulnerableTicks(int invulnerableTicks) {
++        getHandle().invulnerableTicks = invulnerableTicks;
++    }
+     // Purpur end
+ }

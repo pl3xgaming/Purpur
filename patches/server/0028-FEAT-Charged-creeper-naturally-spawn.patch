@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Fri, 29 Nov 2019 22:37:44 -0600
+Subject: [PATCH] [FEAT] Charged creeper naturally spawn
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  creeper:
+    naturally-charged-chance:
+      default: 0.0
+      description: |-
+        Percent chance (0.0 - 1.0) creepers are charged (powered) when spawning
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java b/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java
+index b47f71ca1f1c8bbd1a521836d9cb5d676a33ec76..63a6b1820f60db9eea49a3a589dd50ad25a3c0a2 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java
++++ b/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java
+@@ -9,6 +9,7 @@ import net.minecraft.network.syncher.DataWatcherRegistry;
+ import net.minecraft.server.level.WorldServer;
+ import net.minecraft.sounds.SoundEffect;
+ import net.minecraft.sounds.SoundEffects;
++import net.minecraft.world.DifficultyDamageScaler;
+ import net.minecraft.world.EnumHand;
+ import net.minecraft.world.EnumInteractionResult;
+ import net.minecraft.world.damagesource.DamageSource;
+@@ -17,6 +18,8 @@ import net.minecraft.world.entity.Entity;
+ import net.minecraft.world.entity.EntityAreaEffectCloud;
+ import net.minecraft.world.entity.EntityLightning;
+ import net.minecraft.world.entity.EntityTypes;
++import net.minecraft.world.entity.EnumMobSpawn;
++import net.minecraft.world.entity.GroupDataEntity;
+ import net.minecraft.world.entity.ai.attributes.AttributeProvider;
+ import net.minecraft.world.entity.ai.attributes.GenericAttributes;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalAvoidTarget;
+@@ -39,6 +42,7 @@ import net.minecraft.world.level.IMaterial;
+ import net.minecraft.world.level.World;
+ 
+ // CraftBukkit start
++import net.minecraft.world.level.WorldAccess;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.event.entity.CreatureSpawnEvent;
+ import org.bukkit.event.entity.ExplosionPrimeEvent;
+@@ -59,6 +63,17 @@ public class EntityCreeper extends EntityMonster {
+         super(entitytypes, world);
+     }
+ 
++    // Purpur start
++    @Override
++    public GroupDataEntity prepare(WorldAccess worldaccess, DifficultyDamageScaler difficultydamagescaler, EnumMobSpawn enummobspawn, @javax.annotation.Nullable GroupDataEntity groupdataentity, @javax.annotation.Nullable NBTTagCompound nbttagcompound) {
++        double chance = worldaccess.getMinecraftWorld().purpurConfig.creeperChargedChance;
++        if (chance > 0D && random.nextDouble() <= chance) {
++            setPowered(true);
++        }
++        return super.prepare(worldaccess, difficultydamagescaler, enummobspawn, groupdataentity, nbttagcompound);
++    }
++    // Purpur end
++
+     @Override
+     protected void initPathfinder() {
+         this.goalSelector.a(1, new PathfinderGoalFloat(this));
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 81b0e17a4bc5022ea757f03c2546808148d6e957..638ee71a78d9e75de6ddd7f0aec67a023bb8c06a 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -113,6 +113,11 @@ public class PurpurWorldConfig {
+         turtleEggsBreakFromMinecarts = getBoolean("blocks.turtle_egg.break-from-minecarts", turtleEggsBreakFromMinecarts);
+     }
+ 
++    public double creeperChargedChance = 0.0D;
++    private void creeperSettings() {
++        creeperChargedChance = getDouble("mobs.creeper.naturally-charged-chance", creeperChargedChance);
++    }
++
+     public float giantStepHeight = 2.0F;
+     public float giantJumpHeight = 1.0F;
+     public double giantMovementSpeed = 0.5D;

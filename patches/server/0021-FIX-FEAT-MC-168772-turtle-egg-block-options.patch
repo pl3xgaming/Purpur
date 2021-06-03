@@ -1,0 +1,89 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Thu, 6 Jun 2019 22:15:46 -0500
+Subject: [PATCH] [FIX] [FEAT] MC-168772 - turtle egg block options
+
+{EXPLANATION}
+
+$-----------------------------$
+blocks:
+  turtle_egg:
+    break-from-exp-orbs:
+      default: true
+      description: |-
+        EXP orbs damage/break turtle eggs
+    break-from-items:
+      default: true
+      description: |-
+        Dropped items damage/break turtle eggs
+    break-from-minecarts:
+      default: true
+      description: |-
+        Minecarts damage/break turtle eggs
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/level/block/BlockTurtleEgg.java b/src/main/java/net/minecraft/world/level/block/BlockTurtleEgg.java
+index 6093d4c7431a286477c9be97163ea8d64168c3b0..04504901b1933ed760b34b8abb994de8ec340a4e 100644
+--- a/src/main/java/net/minecraft/world/level/block/BlockTurtleEgg.java
++++ b/src/main/java/net/minecraft/world/level/block/BlockTurtleEgg.java
+@@ -9,12 +9,15 @@ import net.minecraft.sounds.SoundEffects;
+ import net.minecraft.tags.Tag;
+ import net.minecraft.tags.TagsBlock;
+ import net.minecraft.world.entity.Entity;
++import net.minecraft.world.entity.EntityExperienceOrb;
+ import net.minecraft.world.entity.EntityLiving;
+ import net.minecraft.world.entity.EntityTypes;
+ import net.minecraft.world.entity.ambient.EntityBat;
+ import net.minecraft.world.entity.animal.EntityTurtle;
++import net.minecraft.world.entity.item.EntityItem;
+ import net.minecraft.world.entity.monster.EntityZombie;
+ import net.minecraft.world.entity.player.EntityHuman;
++import net.minecraft.world.entity.vehicle.EntityMinecartAbstract;
+ import net.minecraft.world.item.ItemStack;
+ import net.minecraft.world.item.context.BlockActionContext;
+ import net.minecraft.world.level.GameRules;
+@@ -189,6 +192,23 @@ public class BlockTurtleEgg extends Block {
+     }
+ 
+     private boolean a(World world, Entity entity) {
+-        return !(entity instanceof EntityTurtle) && !(entity instanceof EntityBat) ? (!(entity instanceof EntityLiving) ? false : entity instanceof EntityHuman || world.getGameRules().getBoolean(GameRules.MOB_GRIEFING)) : false;
++        // Purpur start - fix MC-168772
++        if (entity instanceof EntityTurtle) {
++            return false;
++        }
++        if (!world.purpurConfig.turtleEggsBreakFromExpOrbs && entity instanceof EntityExperienceOrb) {
++            return false;
++        }
++        if (!world.purpurConfig.turtleEggsBreakFromItems && entity instanceof EntityItem) {
++            return false;
++        }
++        if (!world.purpurConfig.turtleEggsBreakFromMinecarts && entity instanceof EntityMinecartAbstract) {
++            return false;
++        }
++        if (entity instanceof EntityLiving && !(entity instanceof EntityHuman)) {
++            return world.getGameRules().getBoolean(GameRules.MOB_GRIEFING);
++        }
++        return true;
++        // Purpur end
+     }
+ }
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 10a6fcd70869719ed2b2d1442a83ab912e00c898..2f18ca7ae23e913155f25fd07627f376e401ab0f 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -104,6 +104,15 @@ public class PurpurWorldConfig {
+         });
+     }
+ 
++    public boolean turtleEggsBreakFromExpOrbs = true;
++    public boolean turtleEggsBreakFromItems = true;
++    public boolean turtleEggsBreakFromMinecarts = true;
++    private void turtleEggSettings() {
++        turtleEggsBreakFromExpOrbs = getBoolean("blocks.turtle_egg.break-from-exp-orbs", turtleEggsBreakFromExpOrbs);
++        turtleEggsBreakFromItems = getBoolean("blocks.turtle_egg.break-from-items", turtleEggsBreakFromItems);
++        turtleEggsBreakFromMinecarts = getBoolean("blocks.turtle_egg.break-from-minecarts", turtleEggsBreakFromMinecarts);
++    }
++
+     public int villagerBrainTicks = 1;
+     public boolean villagerUseBrainTicksOnlyWhenLagging = true;
+     private void villagerSettings() {

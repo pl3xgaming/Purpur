@@ -1,0 +1,93 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Sat, 23 Nov 2019 17:55:42 -0600
+Subject: [PATCH] [FEAT] Infinite lava source
+
+{EXPLANATION}
+
+$-----------------------------$
+blocks:
+  lava:
+    infinite-source:
+      default: false
+      description: |-
+        Allow lava to take on infinite supply properties similar to water
+    infinite-required-sources:
+      default: 2
+      description: |-
+        The amount of sources required to have infinite lava
+        `infinite-source` must be enabled for this option to work
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/level/material/FluidTypeFlowing.java b/src/main/java/net/minecraft/world/level/material/FluidTypeFlowing.java
+index 6bb4ec00e40795ced73648fefcd1f5027e0113cd..963b7edab813cd32f04c51fd2c6c137988e2a754 100644
+--- a/src/main/java/net/minecraft/world/level/material/FluidTypeFlowing.java
++++ b/src/main/java/net/minecraft/world/level/material/FluidTypeFlowing.java
+@@ -217,7 +217,7 @@ public abstract class FluidTypeFlowing extends FluidType {
+             }
+         }
+ 
+-        if (this.f() && j >= 2) {
++        if (infinite(iworldreader) && j >= getRequiredSources(iworldreader)) { // Purpur
+             IBlockData iblockdata2 = iworldreader.getType(blockposition.down());
+             Fluid fluid1 = iblockdata2.getFluid();
+ 
+@@ -288,6 +288,17 @@ public abstract class FluidTypeFlowing extends FluidType {
+         return (Fluid) this.e().h().set(FluidTypeFlowing.FALLING, flag);
+     }
+ 
++    // Purpur start
++    protected boolean infinite(IWorldReader iworldreader) {
++        return infinite();
++    }
++
++    protected int getRequiredSources(IWorldReader iworldreader) {
++        return 2;
++    }
++    // Purpur end
++
++    protected boolean infinite() { return f(); } // Purpur - OBFHELPER
+     protected abstract boolean f();
+ 
+     protected void a(GeneratorAccess generatoraccess, BlockPosition blockposition, IBlockData iblockdata, EnumDirection enumdirection, Fluid fluid) {
+diff --git a/src/main/java/net/minecraft/world/level/material/FluidTypeLava.java b/src/main/java/net/minecraft/world/level/material/FluidTypeLava.java
+index b362a728b5d17256768847ab09e2505a9cc1918b..86f2e969d98c833700f0f48baf7610ad95b3f8a1 100644
+--- a/src/main/java/net/minecraft/world/level/material/FluidTypeLava.java
++++ b/src/main/java/net/minecraft/world/level/material/FluidTypeLava.java
+@@ -163,6 +163,18 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+         generatoraccess.triggerEffect(1501, blockposition, 0);
+     }
+ 
++    // Purpur start
++    @Override
++    protected boolean infinite(IWorldReader iworldreader) {
++        return iworldreader.getWorldBorder().world.purpurConfig.lavaInfinite;
++    }
++
++    @Override
++    protected int getRequiredSources(IWorldReader iworldreader) {
++        return iworldreader.getWorldBorder().world.purpurConfig.lavaInfiniteRequiredSources;
++    }
++    // Purpur end
++
+     @Override
+     protected boolean f() {
+         return false;
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index f3c9a06be653a0fbd462677866134b634b8611b6..95605436c7d2d8e8b30217dc59d28ce2658d0e26 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -192,6 +192,13 @@ public class PurpurWorldConfig {
+         farmlandGetsMoistFromBelow = getBoolean("blocks.farmland.gets-moist-from-below", farmlandGetsMoistFromBelow);
+     }
+ 
++    public boolean lavaInfinite = false;
++    public int lavaInfiniteRequiredSources = 2;
++    private void lavaSettings() {
++        lavaInfinite = getBoolean("blocks.lava.infinite-source", lavaInfinite);
++        lavaInfiniteRequiredSources = getInt("blocks.lava.infinite-required-sources", lavaInfiniteRequiredSources);
++    }
++
+     public boolean signAllowColors = false;
+     public boolean signRightClickEdit = false;
+     private void signSettings() {

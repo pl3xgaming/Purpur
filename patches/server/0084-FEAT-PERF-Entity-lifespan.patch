@@ -1,0 +1,122 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Sat, 11 Jul 2020 19:41:34 -0500
+Subject: [PATCH] [FEAT] [PERF] Entity lifespan
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/server/network/PlayerConnection.java b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+index d16149731efbaa9ad19083d5654f4e1e14ef3b76..10c5af3949af4a3bee4999753e7545f0ac745e63 100644
+--- a/src/main/java/net/minecraft/server/network/PlayerConnection.java
++++ b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+@@ -2472,6 +2472,7 @@ public class PlayerConnection implements PacketListenerPlayIn {
+                     boolean triggerLeashUpdate = itemInHand != null && itemInHand.getItem() == Items.LEAD && entity instanceof EntityInsentient;
+                     Item origItem = this.player.inventory.getItemInHand() == null ? null : this.player.inventory.getItemInHand().getItem();
+                     PlayerInteractEntityEvent event;
++                    if (entity instanceof EntityInsentient) ((EntityInsentient) entity).ticksSinceLastInteraction = 0; // Purpur
+                     if (packetplayinuseentity.b() == PacketPlayInUseEntity.EnumEntityUseAction.INTERACT) {
+                         event = new PlayerInteractEntityEvent((Player) this.getPlayer(), entity.getBukkitEntity(), (packetplayinuseentity.c() == EnumHand.OFF_HAND) ? EquipmentSlot.OFF_HAND : EquipmentSlot.HAND);
+                     } else {
+diff --git a/src/main/java/net/minecraft/world/entity/EntityInsentient.java b/src/main/java/net/minecraft/world/entity/EntityInsentient.java
+index b70120c32027a456037daac363d420d2edd4bdfe..fdc1b99f0a032a76a02ee88b28d62e049a2fc54c 100644
+--- a/src/main/java/net/minecraft/world/entity/EntityInsentient.java
++++ b/src/main/java/net/minecraft/world/entity/EntityInsentient.java
+@@ -124,7 +124,7 @@ public abstract class EntityInsentient extends EntityLiving {
+     private NBTTagCompound by;
+     private BlockPosition bz;
+     private float bA;
+-
++    public int ticksSinceLastInteraction; // Purpur
+     public boolean aware = true; // CraftBukkit
+ 
+     protected EntityInsentient(EntityTypes<? extends EntityInsentient> entitytypes, World world) {
+@@ -276,6 +276,7 @@ public abstract class EntityInsentient extends EntityLiving {
+                 entityliving = null;
+             }
+         }
++        if (entityliving instanceof EntityPlayer) this.ticksSinceLastInteraction = 0; // Purpur
+         this.goalTarget = entityliving;
+         return true;
+         // CraftBukkit end
+@@ -320,10 +321,35 @@ public abstract class EntityInsentient extends EntityLiving {
+             this.m();
+             this.F();
+         }
+-
++        incrementTicksSinceLastInteraction(); // Purpur
+         this.world.getMethodProfiler().exit();
+     }
+ 
++    // Purpur start
++    private void incrementTicksSinceLastInteraction() {
++        ++ticksSinceLastInteraction;
++        //if (hasRider()) {
++        //    ticksSinceLastInteraction = 0;
++        //    return;
++        //}
++        if (world.purpurConfig.entityLifeSpan <= 0) {
++            return; // feature disabled
++        }
++        if (!isTypeNotPersistent(0) || isPersistent() || isSpecialPersistence() || hasCustomName()) {
++            return; // mob persistent
++        }
++        if (ticksSinceLastInteraction > world.purpurConfig.entityLifeSpan) {
++            this.dead = true;
++        }
++    }
++
++    @Override
++    public boolean damageEntity(DamageSource damagesource, float f) {
++        if (damagesource.getEntity() instanceof EntityPlayer) this.ticksSinceLastInteraction = 0; // Purpur
++        return super.damageEntity(damagesource, f);
++    }
++    // Purpur end
++
+     @Override
+     protected void c(DamageSource damagesource) {
+         this.m();
+@@ -497,6 +523,7 @@ public abstract class EntityInsentient extends EntityLiving {
+         }
+ 
+         nbttagcompound.setBoolean("Bukkit.Aware", this.aware); // CraftBukkit
++        nbttagcompound.setInt("Purpur.ticksSinceLastInteraction", ticksSinceLastInteraction); // Purpur
+     }
+ 
+     @Override
+@@ -567,6 +594,11 @@ public abstract class EntityInsentient extends EntityLiving {
+             this.aware = nbttagcompound.getBoolean("Bukkit.Aware");
+         }
+         // CraftBukkit end
++        // Purpur start
++        if (nbttagcompound.hasKey("Purpur.ticksSinceLastInteraction")) {
++            ticksSinceLastInteraction = nbttagcompound.getInt("Purpur.ticksSinceLastInteraction");
++        }
++        // Purpur end
+     }
+ 
+     @Override
+@@ -1626,7 +1658,7 @@ public abstract class EntityInsentient extends EntityLiving {
+             this.a((EntityLiving) this, entity);
+             this.z(entity);
+         }
+-
++        if (entity instanceof EntityPlayer) this.ticksSinceLastInteraction = 0; // Purpur
+         return flag;
+     }
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 9d7f7fc586200206ff87dfa463479150ed8cd5f1..fa003079da19ee63a02045d57ea3d6cf64578ebd 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -137,6 +137,11 @@ public class PurpurWorldConfig {
+         }
+     }
+ 
++    public int entityLifeSpan = 0;
++    private void entitySettings() {
++        entityLifeSpan = getInt("gameplay-mechanics.entity-lifespan", entityLifeSpan);
++    }
++
+     public List<Item> itemImmuneToCactus = new ArrayList<>();
+     public List<Item> itemImmuneToExplosion = new ArrayList<>();
+     public List<Item> itemImmuneToFire = new ArrayList<>();

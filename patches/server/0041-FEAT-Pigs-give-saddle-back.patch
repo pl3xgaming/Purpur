@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sun, 12 May 2019 01:14:46 -0500
+Subject: [PATCH] [FEAT] Pigs give saddle back
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  pig:
+    give-saddle-back:
+      default: false
+      description: |-
+        Sneak right-click a pig that has a saddle on it's back to remove the saddle
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityPig.java b/src/main/java/net/minecraft/world/entity/animal/EntityPig.java
+index 676ca381a5e111fc15f319e73504e4e60dbf0d2b..1a540e41e6161d011ca4ed30c68ae9df4567b8db 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityPig.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityPig.java
+@@ -156,6 +156,18 @@ public class EntityPig extends EntityAnimal implements ISteerable, ISaddleable {
+ 
+         if (!flag && this.hasSaddle() && !this.isVehicle() && !entityhuman.eq()) {
+             if (!this.world.isClientSide) {
++                // Purpur start
++                if (world.purpurConfig.pigGiveSaddleBack && entityhuman.isSneaking()) {
++                    this.saddleStorage.setSaddle(false);
++                    if (!entityhuman.abilities.canInstantlyBuild) {
++                        ItemStack saddle = new ItemStack(Items.SADDLE);
++                        if (!entityhuman.inventory.pickup(saddle)) {
++                            entityhuman.drop(saddle, false);
++                        }
++                    }
++                    return EnumInteractionResult.SUCCESS;
++                }
++                // Purpur end
+                 entityhuman.startRiding(this);
+             }
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 277cc8361e8faf54b95be1e9f1467a97de14ecc4..5ac1aba522151c42255caf9d29c5b780218ccd32 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -188,6 +188,11 @@ public class PurpurWorldConfig {
+         ironGolemCanSwim = getBoolean("mobs.iron_golem.can-swim", ironGolemCanSwim);
+     }
+ 
++    public boolean pigGiveSaddleBack = false;
++    private void pigSettings() {
++        pigGiveSaddleBack = getBoolean("mobs.pig.give-saddle-back", pigGiveSaddleBack);
++    }
++
+     public String polarBearBreedableItemString = "";
+     public Item polarBearBreedableItem = null;
+     private void polarBearSettings() {

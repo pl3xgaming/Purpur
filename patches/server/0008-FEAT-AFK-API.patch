@@ -1,0 +1,349 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Thu, 8 Aug 2019 15:29:15 -0500
+Subject: [PATCH] [FEAT] AFK API
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Changes Mojang's player idle timeout feature into an AFK system and
+exposes it to the API for plugin use.
+
+$-----------------------------$
+settings:
+  messages:
+    afk-broadcast-away:
+      default: "§e§o%s is now AFK"
+      description: |-
+        This is the message that gets broadcasted when a user goes AFK (must have
+        player-idle-timeout set greater than 0 & kick-if-idle set as false)
+    afk-broadcast-back:
+      default: "§e§o%s is no longer AFK"
+      description: |-
+        This is the message that gets broadcasted when a user is no longer AFK (must
+        have player-idle-timeout set greater than 0 & kick-if-idle set as false)
+    afk-tab-list-prefix:
+      default: "[AFK] "
+      description: |-
+        The prefix that shows up on the playerlist before someone's name when they're AFK
+world-settings:
+  default:
+    gameplay-mechanics:
+      player:
+        idle-timeout:
+          kick-if-idle:
+            default: true
+            description: |-
+              Kick players if they become idle (see server.properties for player-idle-timeout time)
+          tick-nearby-entities:
+            default: true
+            description: |-
+              Should entities tick normally when nearby players are afk. False will require at
+              least 1 non-afk player in order to tick
+          count-as-sleeping:
+            default: false
+            description: |-
+              Should AFK players count as sleeping? (allows active players to skip night by
+              sleeping, even if AFK players are not in bed)
+          update-tab-list:
+            default: false
+            description: |-
+              Should AFK players have their name updated in the tab list (puts [AFK] in front of their name)
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/level/EntityPlayer.java b/src/main/java/net/minecraft/server/level/EntityPlayer.java
+index c813077455a463dd558076d1d7474829f76b905a..b302d1f7c86a8df2ede46871397189f6f2e6b912 100644
+--- a/src/main/java/net/minecraft/server/level/EntityPlayer.java
++++ b/src/main/java/net/minecraft/server/level/EntityPlayer.java
+@@ -2103,8 +2103,54 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+ 
+     public void resetIdleTimer() {
+         this.ca = SystemUtils.getMonotonicMillis();
++        setAfk(false); // Purpur
+     }
+ 
++    // Purpur start
++    private boolean isAfk = false;
++
++    @Override
++    public void setAfk(boolean setAfk) {
++        if (this.isAfk == setAfk) {
++            return;
++        }
++
++        String msg = setAfk ? net.pl3x.purpur.PurpurConfig.afkBroadcastAway : net.pl3x.purpur.PurpurConfig.afkBroadcastBack;
++
++        net.pl3x.purpur.event.PlayerAFKEvent event = new net.pl3x.purpur.event.PlayerAFKEvent(getBukkitEntity(), setAfk, world.purpurConfig.idleTimeoutKick, msg, !Bukkit.isPrimaryThread());
++        if (!event.callEvent() || event.shouldKick()) {
++            return;
++        }
++
++        this.isAfk = setAfk;
++
++        if (!setAfk) {
++            resetIdleTimer();
++        }
++
++        msg = event.getBroadcastMsg();
++        if (msg != null && !msg.isEmpty()) {
++            server.getPlayerList().sendMessage(org.bukkit.craftbukkit.util.CraftChatMessage.fromStringOrNull(String.format(msg, getProfile().getName())));
++        }
++
++        if (world.purpurConfig.idleTimeoutUpdateTabList) {
++            getBukkitEntity().setPlayerListName((setAfk ? net.pl3x.purpur.PurpurConfig.afkTabListPrefix : "") + getName());
++        }
++
++        ((WorldServer) world).everyoneSleeping();
++    }
++
++    @Override
++    public boolean isAfk() {
++        return isAfk;
++    }
++
++    @Override
++    public boolean isCollidable() {
++        return !isAfk() && super.isCollidable();
++    }
++    // Purpur end
++
+     public ServerStatisticManager getStatisticManager() {
+         return this.serverStatisticManager;
+     }
+diff --git a/src/main/java/net/minecraft/server/level/WorldServer.java b/src/main/java/net/minecraft/server/level/WorldServer.java
+index 6fc215df5ed3aa6ef0c23a57e8444602ff9309e8..a97b8d8116920237964cc3a887525f8c3804c640 100644
+--- a/src/main/java/net/minecraft/server/level/WorldServer.java
++++ b/src/main/java/net/minecraft/server/level/WorldServer.java
+@@ -1002,7 +1002,7 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+         // CraftBukkit end
+ 
+         if (this.everyoneSleeping && this.players.stream().noneMatch((entityplayer) -> {
+-            return !entityplayer.isSpectator() && !entityplayer.isDeeplySleeping() && !entityplayer.fauxSleeping; // CraftBukkit
++            return !entityplayer.isSpectator() && !entityplayer.isDeeplySleeping() && !entityplayer.fauxSleeping && !(purpurConfig.idleTimeoutCountAsSleeping && entityplayer.isAfk()); // CraftBukkit // Purpur
+         })) {
+             // CraftBukkit start
+             long l = this.worldData.getDayTime() + 24000L;
+@@ -1345,7 +1345,7 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+             while (iterator.hasNext()) {
+                 EntityPlayer entityplayer = (EntityPlayer) iterator.next();
+ 
+-                if (entityplayer.isSpectator() || (entityplayer.fauxSleeping && !entityplayer.isSleeping())) { // CraftBukkit
++                if (entityplayer.isSpectator() || (entityplayer.fauxSleeping && !entityplayer.isSleeping()) || (purpurConfig.idleTimeoutCountAsSleeping && entityplayer.isAfk())) { // CraftBukkit // Purpur
+                     ++i;
+                 } else if (entityplayer.isSleeping()) {
+                     ++j;
+diff --git a/src/main/java/net/minecraft/server/network/PlayerConnection.java b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+index 8513795943497ca80232e7d47066a6944c2f45ec..de72ebb94052efe8c63bf28f6741a4645b3ee721 100644
+--- a/src/main/java/net/minecraft/server/network/PlayerConnection.java
++++ b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+@@ -399,6 +399,12 @@ public class PlayerConnection implements PacketListenerPlayIn {
+         }
+ 
+         if (this.player.F() > 0L && this.minecraftServer.getIdleTimeout() > 0 && SystemUtils.getMonotonicMillis() - this.player.F() > (long) (this.minecraftServer.getIdleTimeout() * 1000 * 60)) {
++            // Purpur start
++            this.player.setAfk(true);
++            if (!this.player.world.purpurConfig.idleTimeoutKick) {
++                return;
++            }
++            // Purpur end
+             this.player.resetIdleTimer(); // CraftBukkit - SPIGOT-854
+             this.disconnect(new ChatMessage("multiplayer.disconnect.idling"), org.bukkit.event.player.PlayerKickEvent.Cause.IDLING); // Paper - kick event cause
+         }
+@@ -682,6 +688,8 @@ public class PlayerConnection implements PacketListenerPlayIn {
+                     this.lastYaw = to.getYaw();
+                     this.lastPitch = to.getPitch();
+ 
++                    if (!to.getWorld().getUID().equals(from.getWorld().getUID()) || to.getBlockX() != from.getBlockX() || to.getBlockY() != from.getBlockY() || to.getBlockZ() != from.getBlockZ() || to.getYaw() != from.getYaw() || to.getPitch() != from.getPitch()) this.player.resetIdleTimer(); // Purpur
++
+                     // Skip the first time we do this
+                     if (true) { // Spigot - don't skip any move events
+                         Location oldTo = to.clone();
+@@ -1429,7 +1437,7 @@ public class PlayerConnection implements PacketListenerPlayIn {
+ 
+                             if (!this.player.H() && d11 > org.spigotmc.SpigotConfig.movedWronglyThreshold && !this.player.isSleeping() && !this.player.playerInteractManager.isCreative() && this.player.playerInteractManager.getGameMode() != EnumGamemode.SPECTATOR) { // Spigot
+                                 flag1 = true; // Tuinity - diff on change, this should be moved wrongly
+-                                PlayerConnection.LOGGER.warn("{} moved wrongly!", this.player.getDisplayName().getString());
++                                PlayerConnection.LOGGER.warn("{} moved wrongly! ({})", this.player.getDisplayName().getString(), d11); // Purpur
+                             }
+ 
+                             this.player.setLocation(d4, d5, d6, f, f1);
+@@ -1479,6 +1487,8 @@ public class PlayerConnection implements PacketListenerPlayIn {
+                                     this.lastYaw = to.getYaw();
+                                     this.lastPitch = to.getPitch();
+ 
++                                    if (!to.getWorld().getUID().equals(from.getWorld().getUID()) || to.getBlockX() != from.getBlockX() || to.getBlockY() != from.getBlockY() || to.getBlockZ() != from.getBlockZ() || to.getYaw() != from.getYaw() || to.getPitch() != from.getPitch()) this.player.resetIdleTimer(); // Purpur
++
+                                     // Skip the first time we do this
+                                     if (from.getX() != Double.MAX_VALUE) {
+                                         Location oldTo = to.clone();
+diff --git a/src/main/java/net/minecraft/world/entity/IEntitySelector.java b/src/main/java/net/minecraft/world/entity/IEntitySelector.java
+index f5e32faeb6d937cf90b1f3ea251b5cfc91f2338d..f9908fb7cc27a8947030c2100dccf1dc1a4e24f7 100644
+--- a/src/main/java/net/minecraft/world/entity/IEntitySelector.java
++++ b/src/main/java/net/minecraft/world/entity/IEntitySelector.java
+@@ -15,6 +15,7 @@ import net.minecraft.world.scores.ScoreboardTeamBase;
+ public final class IEntitySelector {
+ 
+     public static final Predicate<Entity> a = Entity::isAlive;
++    public static Predicate<EntityLiving> isLivingAlive() { return b; } // Purpur - OBFHELPER
+     public static final Predicate<EntityLiving> b = EntityLiving::isAlive;
+     public static final Predicate<Entity> c = (entity) -> {
+         return entity.isAlive() && !entity.isVehicle() && !entity.isPassenger();
+@@ -35,6 +36,7 @@ public final class IEntitySelector {
+         return !entity.isSpectator();
+     };
+     public static Predicate<EntityHuman> isInsomniac = (player) -> MathHelper.clamp(((EntityPlayer) player).getStatisticManager().getStatisticValue(StatisticList.CUSTOM.get(StatisticList.TIME_SINCE_REST)), 1, Integer.MAX_VALUE) >= 72000; // Paper
++    public static Predicate<EntityHuman> notAfk = (player) -> !player.isAfk(); // Purpur
+ 
+     // Paper start
+     public static final Predicate<Entity> affectsSpawning = (entity) -> {
+diff --git a/src/main/java/net/minecraft/world/entity/player/EntityHuman.java b/src/main/java/net/minecraft/world/entity/player/EntityHuman.java
+index 5bce47fa8f191bc1d33c04c9865cb0efd492a9a2..afa14eddb6a21d4747689af6d70551f10d304be7 100644
+--- a/src/main/java/net/minecraft/world/entity/player/EntityHuman.java
++++ b/src/main/java/net/minecraft/world/entity/player/EntityHuman.java
+@@ -181,6 +181,15 @@ public abstract class EntityHuman extends EntityLiving {
+     }
+     // CraftBukkit end
+ 
++    // Purpur start
++    public void setAfk(boolean setAfk){
++    }
++
++    public boolean isAfk() {
++        return false;
++    }
++    // Purpur end
++
+     public EntityHuman(World world, BlockPosition blockposition, float f, GameProfile gameprofile) {
+         super(EntityTypes.PLAYER, world);
+         this.bL = ItemStack.b;
+diff --git a/src/main/java/net/minecraft/world/level/IEntityAccess.java b/src/main/java/net/minecraft/world/level/IEntityAccess.java
+index a7f2304acf8ee0a15d6eae8c42060e003be13ae7..fd56b2f15e570f266a79c25823a3b3530a693510 100644
+--- a/src/main/java/net/minecraft/world/level/IEntityAccess.java
++++ b/src/main/java/net/minecraft/world/level/IEntityAccess.java
+@@ -183,28 +183,18 @@ public interface IEntityAccess {
+     }
+     // Paper end
+ 
+-    default boolean isPlayerNearby(double d0, double d1, double d2, double d3) {
+-        Iterator iterator = this.getPlayers().iterator();
+-
+-        double d4;
+-
+-        do {
+-            EntityHuman entityhuman;
+-
+-            do {
+-                do {
+-                    if (!iterator.hasNext()) {
+-                        return false;
+-                    }
+-
+-                    entityhuman = (EntityHuman) iterator.next();
+-                } while (!IEntitySelector.g.test(entityhuman));
+-            } while (!IEntitySelector.b.test(entityhuman));
+-
+-            d4 = entityhuman.h(d0, d1, d2);
+-        } while (d3 >= 0.0D && d4 >= d3 * d3);
+-
+-        return true;
++    // Purpur start
++    default boolean isPlayerNearby(double x, double y, double z, double distance) {
++        double distanceSq = distance * distance;
++        for (EntityHuman player : getPlayers()) {
++            if (IEntitySelector.notSpectator().test(player) && IEntitySelector.isLivingAlive().test(player) && IEntitySelector.notAfk.test(player)) {
++                if (distance < 0.0D || player.getDistanceSquared(x, y, z) < distanceSq) {
++                    return true;
++                }
++            }
++        }
++        return false;
++        // Purpur end
+     }
+ 
+     @Nullable
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 2f329bae9f09d0ed21a4538fba6b95919ec35887..95b55fb93049c6686e13aab78ba1ae2b2fd5785b 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -1,6 +1,7 @@
+ package net.pl3x.purpur;
+ 
+ import com.google.common.base.Throwables;
++import net.minecraft.locale.LocaleLanguage;
+ import net.minecraft.server.MinecraftServer;
+ import net.pl3x.purpur.command.PurpurCommand;
+ import org.bukkit.Bukkit;
+@@ -129,6 +130,15 @@ public class PurpurConfig {
+         return config.getString(path, config.getString(path));
+     }
+ 
++    public static String afkBroadcastAway = "§e§o%s is now AFK";
++    public static String afkBroadcastBack = "§e§o%s is no longer AFK";
++    public static String afkTabListPrefix = "[AFK] ";
++    private static void messages() {
++        afkBroadcastAway = getString("settings.messages.afk-broadcast-away", afkBroadcastAway);
++        afkBroadcastBack = getString("settings.messages.afk-broadcast-back", afkBroadcastBack);
++        afkTabListPrefix = getString("settings.messages.afk-tab-list-prefix", afkTabListPrefix);
++    }
++
+     public static String timingsUrl = "https://timings.pl3x.net";
+     private static void timingsSettings() {
+         timingsUrl = getString("settings.timings.url", timingsUrl);
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 361f7857e461578e90cb71e15027dadaf794cb69..2578a4677d1ee060f687be531e696b7c7be89e84 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -56,4 +56,15 @@ public class PurpurWorldConfig {
+         PurpurConfig.config.addDefault("world-settings.default." + path, def);
+         return PurpurConfig.config.getString("world-settings." + worldName + "." + path, PurpurConfig.config.getString("world-settings.default." + path));
+     }
++
++    public boolean idleTimeoutKick = true;
++    public boolean idleTimeoutTickNearbyEntities = true;
++    public boolean idleTimeoutCountAsSleeping = false;
++    public boolean idleTimeoutUpdateTabList = false;
++    private void playerIdleTimeoutSettings() {
++        idleTimeoutKick = getBoolean("gameplay-mechanics.player.idle-timeout.kick-if-idle", idleTimeoutKick);
++        idleTimeoutTickNearbyEntities = getBoolean("gameplay-mechanics.player.idle-timeout.tick-nearby-entities", idleTimeoutTickNearbyEntities);
++        idleTimeoutCountAsSleeping = getBoolean("gameplay-mechanics.player.idle-timeout.count-as-sleeping", idleTimeoutCountAsSleeping);
++        idleTimeoutUpdateTabList = getBoolean("gameplay-mechanics.player.idle-timeout.update-tab-list", idleTimeoutUpdateTabList);
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index ed1bb89ae7b85bf4017315d6189d6cbf595aefe5..f3fb405c92a35796baa30cafcd96df2d8bf162e6 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -2499,4 +2499,21 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+         return spigot;
+     }
+     // Spigot end
++
++    // Purpur start
++    @Override
++    public boolean isAfk() {
++        return getHandle().isAfk();
++    }
++
++    @Override
++    public void setAfk(boolean setAfk) {
++        getHandle().setAfk(setAfk);
++    }
++
++    @Override
++    public void resetIdleTimer() {
++        getHandle().resetIdleTimer();
++    }
++    // Purpur end
+ }
+diff --git a/src/main/java/org/spigotmc/ActivationRange.java b/src/main/java/org/spigotmc/ActivationRange.java
+index 5c2eaca0bc63c7880ee928aba6a24761737aa649..2bbbd4a7ae87c2ead3dc2fd5520adfaefe2776b8 100644
+--- a/src/main/java/org/spigotmc/ActivationRange.java
++++ b/src/main/java/org/spigotmc/ActivationRange.java
+@@ -204,6 +204,7 @@ public class ActivationRange
+         {
+ 
+             player.activatedTick = MinecraftServer.currentTick;
++            if (!player.world.purpurConfig.idleTimeoutTickNearbyEntities && player.isAfk()) continue; // Purpur
+             maxBB = player.getBoundingBox().grow( maxRange, 256, maxRange );
+             ActivationType.MISC.boundingBox = player.getBoundingBox().grow( miscActivationRange, 256, miscActivationRange );
+             ActivationType.RAIDER.boundingBox = player.getBoundingBox().grow( raiderActivationRange, 256, raiderActivationRange );

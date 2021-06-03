@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sun, 26 May 2019 15:19:14 -0500
+Subject: [PATCH] [FEAT] Bring back server name
+
+Re-adds the `server-name` property to server.properties and exposes
+it to the API for plugin use
+
+diff --git a/src/main/java/net/minecraft/server/dedicated/DedicatedServerProperties.java b/src/main/java/net/minecraft/server/dedicated/DedicatedServerProperties.java
+index 1fab9b9c7d41a0d2a551096c2c15f741a887fa2d..f33309f4c1ad92960d0634f3f5b8105c284f26a2 100644
+--- a/src/main/java/net/minecraft/server/dedicated/DedicatedServerProperties.java
++++ b/src/main/java/net/minecraft/server/dedicated/DedicatedServerProperties.java
+@@ -20,6 +20,7 @@ public class DedicatedServerProperties extends PropertyManager<DedicatedServerPr
+     public final boolean onlineMode = this.getBoolean("online-mode", true);
+     public final boolean preventProxyConnections = this.getBoolean("prevent-proxy-connections", false);
+     public final String serverIp = this.getString("server-ip", "");
++    public final String serverName = this.getString("server-name", "Unknown Server"); // Purpur
+     public final boolean spawnAnimals = this.getBoolean("spawn-animals", true);
+     public final boolean spawnNpcs = this.getBoolean("spawn-npcs", true);
+     public final boolean pvp = this.getBoolean("pvp", true);
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index e0a11fe20a38e52ed008f9389ed7218825a8ee27..441a3cbe6321b289f95ea0a269d98d045d4fdffa 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -2553,4 +2553,11 @@ public final class CraftServer implements Server {
+     }
+ 
+     // Paper end
++
++    // Purpur start
++    @Override
++    public String getServerName() {
++        return getProperties().serverName;
++    }
++    // Purpur end
+ }

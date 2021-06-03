@@ -1,0 +1,87 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sun, 5 May 2019 12:58:45 -0500
+Subject: [PATCH] [FEAT] LivingEntity safeFallDistance
+
+Adds the ability to change the safe fall distance for LivingEntity instances with the API
+
+By default the vanilla safe distance value of 3.0 is used until a plugin changes it
+
+diff --git a/src/main/java/net/minecraft/world/entity/EntityLiving.java b/src/main/java/net/minecraft/world/entity/EntityLiving.java
+index 2ff3297fb8c0e4f8c969ba2727eecb7fe06525c4..7d0bb706fb106709432c3fae8758d2cea1d14db8 100644
+--- a/src/main/java/net/minecraft/world/entity/EntityLiving.java
++++ b/src/main/java/net/minecraft/world/entity/EntityLiving.java
+@@ -227,6 +227,7 @@ public abstract class EntityLiving extends Entity {
+     // CraftBukkit start
+     public int expToDrop;
+     public int maxAirTicks = 300;
++    public float safeFallDistance = 3.0F; // Purpur
+     public boolean forceDrops;
+     public ArrayList<org.bukkit.inventory.ItemStack> drops = new ArrayList<org.bukkit.inventory.ItemStack>();
+     public final org.bukkit.craftbukkit.attribute.CraftAttributeMap craftAttributes;
+@@ -321,8 +322,8 @@ public abstract class EntityLiving extends Entity {
+             this.cR();
+         }
+ 
+-        if (!this.world.isClientSide && this.fallDistance > 3.0F && flag) {
+-            float f = (float) MathHelper.f(this.fallDistance - 3.0F);
++        if (!this.world.isClientSide && this.fallDistance > this.safeFallDistance && flag) { // Purpur
++            float f = (float) MathHelper.f(this.fallDistance - this.safeFallDistance); // Purpur
+ 
+             if (!iblockdata.isAir()) {
+                 double d1 = Math.min((double) (0.2F + f / 15.0F), 2.5D);
+@@ -1787,7 +1788,7 @@ public abstract class EntityLiving extends Entity {
+         MobEffect mobeffect = this.getEffect(MobEffects.JUMP);
+         float f2 = mobeffect == null ? 0.0F : (float) (mobeffect.getAmplifier() + 1);
+ 
+-        return MathHelper.f((f - 3.0F - f2) * f1);
++        return MathHelper.f((f - this.safeFallDistance - f2) * f1); // Purpur
+     }
+ 
+     protected void playBlockStepSound() {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseAbstract.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseAbstract.java
+index 1e41c45af6dbcf097d7d6104e63db637f199301a..cb6e2053d1315b65812e7bff8a17988b5b8ab0e4 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseAbstract.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseAbstract.java
+@@ -272,7 +272,7 @@ public abstract class EntityHorseAbstract extends EntityAnimal implements IInven
+ 
+     @Override
+     protected int e(float f, float f1) {
+-        return MathHelper.f((f * 0.5F - 3.0F) * f1);
++        return MathHelper.f((f * 0.5F - this.safeFallDistance) * f1); // Purpur
+     }
+ 
+     protected int getChestSlots() {
+diff --git a/src/main/java/net/minecraft/world/entity/monster/EntityGiantZombie.java b/src/main/java/net/minecraft/world/entity/monster/EntityGiantZombie.java
+index 3b004160da9a2aed440a3ccda538d78f91c61e87..5e6a92dcdbca686d5a8cfc4aaff72b70b81b111f 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/EntityGiantZombie.java
++++ b/src/main/java/net/minecraft/world/entity/monster/EntityGiantZombie.java
+@@ -13,6 +13,7 @@ public class EntityGiantZombie extends EntityMonster {
+ 
+     public EntityGiantZombie(EntityTypes<? extends EntityGiantZombie> entitytypes, World world) {
+         super(entitytypes, world);
++        this.safeFallDistance = 10.0F; // Purpur
+     }
+ 
+     @Override
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
+index 592dacf8cc924caac339a8810ba5b0d85448ed90..75af4d5385d4366e562a53716e020ba20ccbea94 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
+@@ -875,4 +875,16 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
+         throw new IllegalArgumentException(entityCategory + " is an unrecognized entity category");
+     }
+     // Paper end
++
++    // Purpur start
++    @Override
++    public float getSafeFallDistance() {
++        return getHandle().safeFallDistance;
++    }
++
++    @Override
++    public void setSafeFallDistance(float safeFallDistance) {
++        getHandle().safeFallDistance = safeFallDistance;
++    }
++    // Purpur end
+ }

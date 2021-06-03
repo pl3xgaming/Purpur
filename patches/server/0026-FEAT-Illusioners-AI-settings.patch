@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Fri, 5 Jul 2019 11:09:25 -0500
+Subject: [PATCH] [FEAT] Illusioners AI settings
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  illusioner:
+    movement-speed:
+      default: 0.5
+      description: |-
+        Movement speed attribute
+    follow-range:
+      default: 18.0
+      description: |-
+        Follow range attribute
+    attributes:
+      max-health:
+        default: 32.0
+        description: |-
+          Max health attribute
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/monster/EntityIllagerIllusioner.java b/src/main/java/net/minecraft/world/entity/monster/EntityIllagerIllusioner.java
+index fee9a5140f097225b5da58b18bfbd528dffdc77b..cb092bee9d6827d4b0276bfa9b033cf7ca86ead4 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/EntityIllagerIllusioner.java
++++ b/src/main/java/net/minecraft/world/entity/monster/EntityIllagerIllusioner.java
+@@ -56,6 +56,15 @@ public class EntityIllagerIllusioner extends EntityIllagerWizard implements IRan
+ 
+     }
+ 
++    // Purpur start
++    @Override
++    protected void initAttributes() {
++        this.getAttributeInstance(GenericAttributes.MOVEMENT_SPEED).setValue(this.world.purpurConfig.illusionerMovementSpeed);
++        this.getAttributeInstance(GenericAttributes.FOLLOW_RANGE).setValue(this.world.purpurConfig.illusionerFollowRange);
++        this.getAttributeInstance(GenericAttributes.MAX_HEALTH).setValue(this.world.purpurConfig.illusionerMaxHealth);
++    }
++    // Purpur end
++
+     @Override
+     protected void initPathfinder() {
+         super.initPathfinder();
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 1c87c929aaae17631100d1aa30b3e7ecce52686f..d6bd971a62af7341f8dc8b3afe32786ced6fcd41 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -135,6 +135,20 @@ public class PurpurWorldConfig {
+         giantMaxHealth = getDouble("mobs.giant.attributes.max-health", giantMaxHealth);
+     }
+ 
++    public double illusionerMovementSpeed = 0.5D;
++    public double illusionerFollowRange = 18.0D;
++    public double illusionerMaxHealth = 32.0D;
++    private void illusionerSettings() {
++        illusionerMovementSpeed = getDouble("mobs.illusioner.movement-speed", illusionerMovementSpeed);
++        illusionerFollowRange = getDouble("mobs.illusioner.follow-range", illusionerFollowRange);
++        if (PurpurConfig.version < 8) {
++            double oldValue = getDouble("mobs.illusioner.max-health", illusionerMaxHealth);
++            set("mobs.illusioner.attributes.max-health", oldValue);
++            set("mobs.illusioner.max-health", null);
++        }
++        illusionerMaxHealth = getDouble("mobs.illusioner.attributes.max-health", illusionerMaxHealth);
++    }
++
+     public int villagerBrainTicks = 1;
+     public boolean villagerUseBrainTicksOnlyWhenLagging = true;
+     private void villagerSettings() {

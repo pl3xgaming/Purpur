@@ -1,0 +1,69 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Tue, 23 Jul 2019 08:28:21 -0500
+Subject: [PATCH] [FEAT] Configurable villager brain ticks
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  villager:
+    brain-ticks:
+      default: 1
+      description: |-
+        How often (in ticks) should villager's tick their brain logic. Vanilla value is to tick every tick (1).
+        Higher amounts makes them tick less often to reduce lag, but setting it too high could result in unresponsive villagers
+    use-brain-ticks-only-when-lagging:
+      default: true
+      description: |-
+        Only use the brain ticks setting when the server is lagging (see settings.lagging-threshold).
+        If set to false the mobs.villager.brain-ticks setting is always used
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java b/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
+index 85374ac8f5460790de03b47d7c3ce19ed5596afe..c45e6ae3f912ac582c6ba693517e05cd8fbf33e2 100644
+--- a/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
++++ b/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
+@@ -127,6 +127,7 @@ public class EntityVillager extends EntityVillagerAbstract implements Reputation
+     }, MemoryModuleType.MEETING_POINT, (entityvillager, villageplacetype) -> {
+         return villageplacetype == VillagePlaceType.s;
+     });
++    private final int brainTickOffset; // Purpur
+ 
+     public EntityVillager(EntityTypes<? extends EntityVillager> entitytypes, World world) {
+         this(entitytypes, world, VillagerType.PLAINS);
+@@ -139,6 +140,7 @@ public class EntityVillager extends EntityVillagerAbstract implements Reputation
+         this.getNavigation().d(true);
+         this.setCanPickupLoot(true);
+         this.setVillagerData(this.getVillagerData().withType(villagertype).withProfession(VillagerProfession.NONE));
++        this.brainTickOffset = getRandom().nextInt(100); // Purpur
+     }
+ 
+     @Override
+@@ -235,6 +237,10 @@ public class EntityVillager extends EntityVillagerAbstract implements Reputation
+     protected void mobTick() { mobTick(false); }
+     protected void mobTick(boolean inactive) {
+         this.world.getMethodProfiler().enter("villagerBrain");
++        // Purpur start
++        boolean tick = (world.getTime() + brainTickOffset) % world.purpurConfig.villagerBrainTicks == 0;
++        if (((WorldServer) world).getMinecraftServer().lagging ? tick : world.purpurConfig.villagerUseBrainTicksOnlyWhenLagging || tick)
++        // Purpur end
+         if (!inactive) this.getBehaviorController().a((WorldServer) this.world, this); // CraftBukkit - decompile error // Paper
+         this.world.getMethodProfiler().exit();
+         if (this.bF) {
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index c441fcea9b2b5a77b801c8a69541cf42050927dc..c7fb5a737cab0083c39732247acb8f4e87562894 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -74,4 +74,11 @@ public class PurpurWorldConfig {
+         playerSpawnInvulnerableTicks = getInt("gameplay-mechanics.player.spawn-invulnerable-ticks", playerSpawnInvulnerableTicks);
+         playerInvulnerableWhileAcceptingResourcePack = getBoolean("gameplay-mechanics.player.invulnerable-while-accepting-resource-pack", playerInvulnerableWhileAcceptingResourcePack);
+     }
++
++    public int villagerBrainTicks = 1;
++    public boolean villagerUseBrainTicksOnlyWhenLagging = true;
++    private void villagerSettings() {
++        villagerBrainTicks = getInt("mobs.villager.brain-ticks", villagerBrainTicks);
++        villagerUseBrainTicksOnlyWhenLagging = getBoolean("mobs.villager.use-brain-ticks-only-when-lagging", villagerUseBrainTicksOnlyWhenLagging);
++    }
+ }
