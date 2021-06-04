@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sun, 12 May 2019 00:43:12 -0500
 Subject: [PATCH] [FEAT] Giants AI settings
 
-{EXPLANATION}
+Adds zombie AI to Giants, and offers configuration for basic settings.
 
 $-----------------------------$
 mobs:

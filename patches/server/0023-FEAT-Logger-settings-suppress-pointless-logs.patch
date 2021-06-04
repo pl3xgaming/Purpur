@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 19 Oct 2019 00:52:12 -0500
 Subject: [PATCH] [FEAT] Logger settings (suppress pointless logs)
 
-{EXPLANATION}
+Adds configuration options to disable certain useless log output
 
 $-----------------------------$
 settings:

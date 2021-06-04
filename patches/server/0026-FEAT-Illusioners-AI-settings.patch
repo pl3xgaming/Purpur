@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 5 Jul 2019 11:09:25 -0500
 Subject: [PATCH] [FEAT] Illusioners AI settings
 
-{EXPLANATION}
+Adds AI to Illusioners, and offers configuration for basic settings.
 
 $-----------------------------$
 mobs:

@@ -3,7 +3,8 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Sat, 28 Mar 2020 01:51:32 -0500
 Subject: [PATCH] [FIX] vanilla command permission handler
 
-{EXPLANATION}
+Fixes vanilla commands from showing in tab complete and /help if a player does not
+have the correct permission to perform the command.
 
 diff --git a/src/main/java/com/mojang/brigadier/tree/CommandNode.java b/src/main/java/com/mojang/brigadier/tree/CommandNode.java
 index c0fac7369b111e65b896a15848ae22457e5e8914..5278997e522b495b83e53cac5968388d6eca45e4 100644

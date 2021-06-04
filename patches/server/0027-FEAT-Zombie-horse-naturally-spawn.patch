@@ -3,7 +3,8 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sun, 7 Jul 2019 19:52:16 -0500
 Subject: [PATCH] [FEAT] Zombie horse naturally spawn
 
-{EXPLANATION}
+Adds the ability to control natural zombie horse spawns during thunderstorms. These zombie horse
+spawns will replace the natural skeleton horse spawns at the configured percent value (0.0 - 1.0)
 
 $-----------------------------$
 mobs:

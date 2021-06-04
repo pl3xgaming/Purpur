@@ -3,7 +3,7 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Fri, 29 Nov 2019 22:37:44 -0600
 Subject: [PATCH] [FEAT] Charged creeper naturally spawn
 
-{EXPLANATION}
+Adds configuration to control percent change a creeper will be charged (powered) when it spawns
 
 $-----------------------------$
 mobs:

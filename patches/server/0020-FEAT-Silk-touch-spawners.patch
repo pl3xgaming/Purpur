@@ -3,7 +3,11 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Thu, 9 May 2019 14:27:37 -0500
 Subject: [PATCH] [FEAT] Silk touch spawners
 
-{EXPLANATION}
+Adds the ability to mine spawner cages using tools with silk touch enchantment, and
+the ability to place those spawner cages back down without them reverting to pig spawners.
+
+Note: Some plugins may interfere with this (Essentials, CMI, etc). Server admins will have
+to bypass those plugins' features using whatever method is available to them.
 
 $-----------------------------$
 gameplay-mechanics:

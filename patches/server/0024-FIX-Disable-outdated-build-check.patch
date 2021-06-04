@@ -3,7 +3,7 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Sun, 15 Dec 2019 12:53:59 -0600
 Subject: [PATCH] [FIX] Disable outdated build check
 
-{EXPLANATION}
+Permanently disable Spigot's outdated build check and startup delay.
 
 diff --git a/src/main/java/org/bukkit/craftbukkit/Main.java b/src/main/java/org/bukkit/craftbukkit/Main.java
 index 09168bced10094c2058ffe7a10613b83360d998b..51cdc7e87413302a73416a5da724d873efb29657 100644

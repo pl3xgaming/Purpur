@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 5 Jul 2019 18:21:00 -0500
 Subject: [PATCH] [FEAT] PlayerSetSpawnerTypeWithEggEvent
 
-{EXPLANATION}
+Adds a new event to the API that triggers when a player changes a spawner's mob type using a spawner egg
 
 diff --git a/src/main/java/net/minecraft/world/entity/EntityTypes.java b/src/main/java/net/minecraft/world/entity/EntityTypes.java
 index 80c229c1852199fda85c03453d64cae33e413e89..6335e9046a6288f7bcf945ad8c381e080744653d 100644

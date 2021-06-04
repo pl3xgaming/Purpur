@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Thu, 6 Jun 2019 22:15:46 -0500
 Subject: [PATCH] [FIX] [FEAT] MC-168772 - turtle egg block options
 
-{EXPLANATION}
+Adds configuration options to disable turtle eggs from breaking.
 
 $-----------------------------$
 blocks:

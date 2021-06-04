@@ -3,7 +3,10 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Sat, 2 May 2020 20:55:44 -0500
 Subject: [PATCH] [FEAT] Player invulnerabilities
 
-{EXPLANATION}
+Exposes player invulnerability after spawning to the config.
+
+Also adds a new setting to put a player into invulnerable mode while
+accepting a resource pack so they dont take damage during the loading screen
 
 $-----------------------------$
 gameplay-mechanics:

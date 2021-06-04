@@ -3,7 +3,8 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Tue, 23 Jul 2019 08:28:21 -0500
 Subject: [PATCH] [FEAT] Configurable villager brain ticks
 
-{EXPLANATION}
+Controls the number of times a villager's brain can tick. Skipping brain ticks
+leads to less lag, but comes at a cost of slower reaction times.
 
 $-----------------------------$
 mobs:

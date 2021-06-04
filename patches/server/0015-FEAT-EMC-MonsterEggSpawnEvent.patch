@@ -3,7 +3,7 @@ From: Aikar <aikar@aikar.co>
 Date: Sat, 20 Jul 2013 22:40:56 -0400
 Subject: [PATCH] [FEAT] EMC - MonsterEggSpawnEvent
 
-{EXPLANATION}
+Adds a new event that triggers when a mob is spawned using a spawner egg
 
 diff --git a/src/main/java/net/minecraft/world/entity/EntityTypes.java b/src/main/java/net/minecraft/world/entity/EntityTypes.java
 index 6335e9046a6288f7bcf945ad8c381e080744653d..1bfde4cfc0f27705238abf7852ad9bb7997e23e6 100644

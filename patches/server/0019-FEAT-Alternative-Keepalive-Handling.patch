@@ -3,7 +3,11 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 11 Oct 2019 00:17:39 -0500
 Subject: [PATCH] [FEAT] Alternative Keepalive Handling
 
-{EXPLANATION}
+Replaces Mojang's keep-alive packet processing with a completely different implementation.
+
+This new implementation will send out a keep alive packet every 1 second, and if any of these
+packets are responded to within 30 seconds the connection is considered alive and the player
+will not be kicked.
 
 $-----------------------------$
 settings:
