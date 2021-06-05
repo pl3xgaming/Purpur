@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Sat, 28 Dec 2019 04:21:54 -0600
-Subject: [PATCH] [FEAT] permission check for F3+N debug keybind
+Subject: [PATCH] [FEAT] Permission check for F3+N debug keybind
 
 Adds a "purpur.debug.f3n" permission check for the F3+N debug keybind
 

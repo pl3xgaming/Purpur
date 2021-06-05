@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 13 Jul 2019 15:56:22 -0500
 Subject: [PATCH] [FEAT] Tulips change fox type
 
-{EXPLANATION}
+Change a fox's variation by feeding it an orange (for regular fox) or white (for snow fox) tulip.
 
 $-----------------------------$
 mobs:

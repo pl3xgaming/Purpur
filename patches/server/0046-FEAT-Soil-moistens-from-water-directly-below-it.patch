@@ -1,9 +1,9 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 21 Jun 2019 14:37:10 -0500
-Subject: [PATCH] [FEAT] soil moistens from water directly below it
+Subject: [PATCH] [FEAT] Soil moistens from water directly below it
 
-{EXPLANATION}
+Adds an old beta mechanic where soil (farmland) will get moist when water is directly below it
 
 $-----------------------------$
 blocks:

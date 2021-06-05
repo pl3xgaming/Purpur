@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 29 Jun 2019 02:32:40 -0500
 Subject: [PATCH] [FEAT] Minecart settings and WASD controls
 
-{EXPLANATION}
+Adds minecart settings and WASD controls
 
 $-----------------------------$
 gameplay-mechanics:

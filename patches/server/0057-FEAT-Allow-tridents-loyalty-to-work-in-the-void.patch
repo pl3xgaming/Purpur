@@ -3,7 +3,7 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Thu, 19 Mar 2020 19:39:34 -0500
 Subject: [PATCH] [FEAT] Allow tridents' loyalty to work in the void
 
-{EXPLANATION}
+If a trident with loyalty gets throw into the void it will come back to you instead of die
 
 $-----------------------------$
 option:

@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 3 May 2019 23:53:16 -0500
 Subject: [PATCH] [FIX]] Cow rotation when shearing mooshroom
 
-{EXPLANATION}
+Fixes a bug where cows always face south when they are sheared instead of the way the mooshroom was facing
 
 diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityMushroomCow.java b/src/main/java/net/minecraft/world/entity/animal/EntityMushroomCow.java
 index 9face4480dcc89d9106ebe596020c1888350ef2d..d28d4d2c1eff2c130f49c2bce3c19da212dba5dc 100644

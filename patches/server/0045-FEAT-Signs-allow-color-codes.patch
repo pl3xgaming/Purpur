@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Thu, 6 Jun 2019 17:40:30 -0500
 Subject: [PATCH] [FEAT] Signs allow color codes
 
-{EXPLANATION}
+Allow using legacy color codes on signs
 
 $-----------------------------$
 blocks:

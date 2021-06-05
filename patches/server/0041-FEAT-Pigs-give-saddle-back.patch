@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sun, 12 May 2019 01:14:46 -0500
 Subject: [PATCH] [FEAT] Pigs give saddle back
 
-{EXPLANATION}
+Make pigs give your saddle back without killing them by shift right clicking the pig
 
 $-----------------------------$
 mobs:

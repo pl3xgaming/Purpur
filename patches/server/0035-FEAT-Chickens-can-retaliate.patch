@@ -3,7 +3,7 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Sun, 12 Apr 2020 13:19:34 -0500
 Subject: [PATCH] [FEAT] Chickens can retaliate
 
-{EXPLANATION}
+Chickens will fight back if you attack them.
 
 $-----------------------------$
 mobs:

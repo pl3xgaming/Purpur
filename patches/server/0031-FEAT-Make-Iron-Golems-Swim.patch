@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 15 Jun 2019 03:12:15 -0500
 Subject: [PATCH] [FEAT] Make Iron Golems Swim
 
-{EXPLANATION}
+Make the iron golem swim in water instead of sinking to the bottom
 
 $-----------------------------$
 mobs:

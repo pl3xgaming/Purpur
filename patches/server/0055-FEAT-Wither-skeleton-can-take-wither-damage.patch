@@ -1,9 +1,9 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Tue, 14 Jan 2020 19:43:40 -0600
-Subject: [PATCH] [FEAT] wither skeleton can take wither damage
+Subject: [PATCH] [FEAT] Wither skeleton can take wither damage
 
-{EXPLANATION}
+Make the wither skeleton take damage from the wither effect
 
 $-----------------------------$
 mobs:

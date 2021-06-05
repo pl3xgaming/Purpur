@@ -3,7 +3,8 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sun, 6 Oct 2019 12:46:35 -0500
 Subject: [PATCH] [FEAT] Option to set armorstand step height
 
-{EXPLANATION}
+Adjust the step-height of armorstands to make them walk up blocks when pushed against them.
+Useful for plugins that make armorstands movable, like Vehicles.
 
 $-----------------------------$
 gameplay-mechanics:

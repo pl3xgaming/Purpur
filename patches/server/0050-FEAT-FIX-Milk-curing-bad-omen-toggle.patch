@@ -1,9 +1,9 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Wed, 10 Jul 2019 20:43:05 -0500
-Subject: [PATCH] [FEAT] Milk curing bad omen toggle
+Subject: [PATCH] [FEAT] [FIX] Milk curing bad omen toggle
 
-{EXPLANATION}
+Removes the ability for milk to cure bad omen for those that feel bad omen is a curse, not a potion effect
 
 $-----------------------------$
 gameplay-mechanics:

@@ -3,7 +3,8 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 4 May 2019 01:10:30 -0500
 Subject: [PATCH] [FEAT] Cows eat mushrooms
 
-{EXPLANATION}
+Makes feeding mushrooms to cows change into a mooshroom. The color of the mushroom used
+determines the color of the mooshroom (brown or red).
 
 $-----------------------------$
 mobs:

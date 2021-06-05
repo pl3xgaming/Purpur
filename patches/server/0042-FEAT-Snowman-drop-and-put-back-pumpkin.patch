@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 3 May 2019 23:58:44 -0500
 Subject: [PATCH] [FEAT] Snowman drop and put back pumpkin
 
-{EXPLANATION}
+Control the pumpkin on snowman heads.
 
 $-----------------------------$
 mobs:

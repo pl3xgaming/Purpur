@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 11 Oct 2019 00:17:39 -0500
-Subject: [PATCH] [FEAT] Alternative Keepalive Handling
+Subject: [PATCH] [FEAT] Alternative keepalive handling
 
 Replaces Mojang's keep-alive packet processing with a completely different implementation.
 

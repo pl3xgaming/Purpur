@@ -3,7 +3,7 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Thu, 26 Mar 2020 19:06:22 -0500
 Subject: [PATCH] [FEAT] Configurable TPS Catchup
 
-{EXPLANATION}
+Allow to disable spigot's TPS catchup system
 
 $-----------------------------$
 settings:

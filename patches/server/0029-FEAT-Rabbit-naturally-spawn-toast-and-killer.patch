@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 31 Aug 2019 17:47:11 -0500
 Subject: [PATCH] [FEAT] Rabbit naturally spawn toast and killer
 
-{EXPLANATION}
+Adds a percent chance to spawn the killer rabbit or toast variations of the rabbit
 
 $-----------------------------$
 mobs:

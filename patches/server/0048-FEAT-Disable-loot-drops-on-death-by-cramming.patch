@@ -3,7 +3,8 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Wed, 3 Jul 2019 23:58:31 -0500
 Subject: [PATCH] [FEAT] Disable loot drops on death by cramming
 
-{EXPLANATION}
+Stops entities from dropping loot on death if killed by cramming gamerule, effectively
+neutralizing one type of laggy mob farm.
 
 $-----------------------------$
 gameplay-mechanics:

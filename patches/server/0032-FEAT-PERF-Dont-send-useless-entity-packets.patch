@@ -3,7 +3,8 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 6 Jul 2019 17:00:04 -0500
 Subject: [PATCH] [FEAT] [PERF] Dont send useless entity packets
 
-{EXPLANATION}
+Dont send empty move packets to clients if an entity has not actually moved. Cuts down
+on the amount of bandwidth used.
 
 $-----------------------------$
 settings:

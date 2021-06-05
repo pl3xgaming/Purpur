@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Fri, 24 May 2019 02:39:25 -0500
 Subject: [PATCH] [FEAT] Signs editable on right click
 
-{EXPLANATION}
+Add the ability to edit signs by right clicking then with a sign in hand.
 
 $-----------------------------$
 blocks:

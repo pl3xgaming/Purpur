@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Sat, 28 Mar 2020 01:51:32 -0500
-Subject: [PATCH] [FIX] vanilla command permission handler
+Subject: [PATCH] [FIX] Vanilla command permission handler
 
 Fixes vanilla commands from showing in tab complete and /help if a player does not
 have the correct permission to perform the command.

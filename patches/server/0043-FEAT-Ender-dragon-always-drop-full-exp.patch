@@ -3,7 +3,7 @@ From: William Blake Galbreath <blake.galbreath@gmail.com>
 Date: Sat, 24 Aug 2019 14:42:54 -0500
 Subject: [PATCH] [FEAT] Ender dragon always drop full exp
 
-{EXPLANATION}
+Make the ender dragon always drop full amount of exp when killed, even if its not the first one.
 
 $-----------------------------$
 mobs:

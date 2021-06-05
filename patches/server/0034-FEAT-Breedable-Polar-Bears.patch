@@ -3,7 +3,7 @@ From: William Blake Galbreath <Blake.Galbreath@GMail.com>
 Date: Thu, 26 Mar 2020 19:46:44 -0500
 Subject: [PATCH] [FEAT] Breedable Polar Bears
 
-{EXPLANATION}
+Makes polar bears breedable by tempting and feeding them a specific item.
 
 $-----------------------------$
 mobs:
