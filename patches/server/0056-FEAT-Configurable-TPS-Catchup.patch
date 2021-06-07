@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Thu, 26 Mar 2020 19:06:22 -0500
+Subject: [PATCH] [FEAT] Configurable TPS Catchup
+
+Allow to disable spigot's TPS catchup system
+
+$-----------------------------$
+settings:
+  tps-catchup:
+    default: true
+    description: |-
+      Allows you to disable spigot's TPS catchup system
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 991ac5baf3f10631edb0e60d17c714af1f406a29..d93ecf4b3451b1c3c309aadfe2ec287a68df0713 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -1136,7 +1136,13 @@ public abstract class MinecraftServer extends IAsyncTaskHandlerReentrant<TickTas
+                     this.a(this::canSleepForTick);
+                     this.methodProfiler.exitEnter("nextTickWait");
+                     this.X = true;
+-                    this.W = Math.max(SystemUtils.getMonotonicMillis() + 50L, this.nextTick);
++                    // Purpur start - tps catchup
++                    if (net.pl3x.purpur.PurpurConfig.tpsCatchup) {
++                        this.W = Math.max(SystemUtils.getMonotonicMillis() + 50L, this.nextTick);
++                    } else {
++                        this.W = this.nextTick = curTime / 1000000L + 50L;
++                    }
++                    // Purpur end - tps catchup
+                     this.sleepForTick();
+                     this.methodProfiler.exit();
+                     this.methodProfiler.b();
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 6d5c2f469e4a7a13a69ac3f7a1dadeac6aabb531..8d27fff773b74014351bfbfeed0197272234be4a 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -190,4 +190,9 @@ public class PurpurConfig {
+         loggerSuppressInitLegacyMaterialError = getBoolean("settings.logger.suppress-init-legacy-material-errors", loggerSuppressInitLegacyMaterialError);
+         loggerSuppressIgnoredAdvancementWarnings = getBoolean("settings.logger.suppress-ignored-advancement-warnings", loggerSuppressIgnoredAdvancementWarnings);
+     }
++
++    public static boolean tpsCatchup = true;
++    private static void tpsCatchup() {
++        tpsCatchup = getBoolean("settings.tps-catchup", tpsCatchup);
++    }
+ }

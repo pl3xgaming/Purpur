@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Mon, 17 Aug 2020 17:34:33 -0500
+Subject: [PATCH] [FEAT] Crying obsidian valid for portal frames
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/world/level/block/Block.java b/src/main/java/net/minecraft/world/level/block/Block.java
+index cfdc602947548970b3fde00dd9fddf4e82c28841..4e0b88e26ad8017d93841c4149a1687c1db4ff0b 100644
+--- a/src/main/java/net/minecraft/world/level/block/Block.java
++++ b/src/main/java/net/minecraft/world/level/block/Block.java
+@@ -140,6 +140,7 @@ public class Block extends BlockBase implements IMaterial {
+         return tag.isTagged(this);
+     }
+ 
++    public boolean equals(Block block) { return a(block); } // Purpur - OBFHELPER
+     public boolean a(Block block) {
+         return this == block;
+     }
+diff --git a/src/main/java/net/minecraft/world/level/block/state/BlockBase.java b/src/main/java/net/minecraft/world/level/block/state/BlockBase.java
+index 0ea0a1fc5f4d879d48bbdf24731dabec10dbccd1..df595dc52858807479584ce8da49390a25695990 100644
+--- a/src/main/java/net/minecraft/world/level/block/state/BlockBase.java
++++ b/src/main/java/net/minecraft/world/level/block/state/BlockBase.java
+@@ -742,6 +742,7 @@ public abstract class BlockBase {
+         }
+ 
+         public final boolean isSameInstance(Block block) { return a(block); } // Paper - OBFHELPER
++        public boolean equals(Block block) { return a(block); } // Purpur - OBFHELPER
+         public boolean a(Block block) {
+             return this.getBlock().a(block);
+         }
+diff --git a/src/main/java/net/minecraft/world/level/portal/BlockPortalShape.java b/src/main/java/net/minecraft/world/level/portal/BlockPortalShape.java
+index 3f8a674345bcad8289a48d2daa5e2a283528e952..3c35f5d171df518f491cad1f49882622903302a6 100644
+--- a/src/main/java/net/minecraft/world/level/portal/BlockPortalShape.java
++++ b/src/main/java/net/minecraft/world/level/portal/BlockPortalShape.java
+@@ -30,7 +30,7 @@ import org.bukkit.event.world.PortalCreateEvent;
+ public class BlockPortalShape {
+ 
+     private static final BlockBase.e a = (iblockdata, iblockaccess, blockposition) -> {
+-        return iblockdata.a(Blocks.OBSIDIAN);
++        return iblockdata.equals(Blocks.OBSIDIAN) || (net.pl3x.purpur.PurpurConfig.cryingObsidianValidForPortalFrame && iblockdata.equals(Blocks.CRYING_OBSIDIAN)); // Purpur
+     };
+     private final GeneratorAccess b;
+     private final EnumDirection.EnumAxis c;
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 65f436e0a27c8687180d7008dbff1cf8f667383c..318caff699e2a1656ef9428641f898f0508a1df7 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -180,6 +180,7 @@ public class PurpurConfig {
+     public static boolean barrelSixRows = false;
+     public static boolean enderChestSixRows = false;
+     public static boolean enderChestPermissionRows = false;
++    public static boolean cryingObsidianValidForPortalFrame = false;
+     private static void blockSettings() {
+         if (version < 3) {
+             boolean oldValue = getBoolean("settings.barrel.packed-barrels", true);
+@@ -194,6 +195,7 @@ public class PurpurConfig {
+         enderChestSixRows = getBoolean("settings.blocks.ender_chest.six-rows", enderChestSixRows);
+         InventoryType.ENDER_CHEST.setDefaultSize(enderChestSixRows ? 54 : 27);
+         enderChestPermissionRows = getBoolean("settings.blocks.ender_chest.use-permissions-for-rows", enderChestPermissionRows);
++        cryingObsidianValidForPortalFrame = getBoolean("settings.blocks.crying_obsidian.valid-for-portal-frame", cryingObsidianValidForPortalFrame);
+     }
+ 
+     public static boolean endermanShortHeight = false;

@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Tue, 3 Nov 2020 01:25:06 -0600
+Subject: [PATCH] [FEAT] Allow color codes in books
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/server/network/PlayerConnection.java b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+index e8a9c8a7fc4089e48e09afc1638cf1ccde7b0fab..d16149731efbaa9ad19083d5654f4e1e14ef3b76 100644
+--- a/src/main/java/net/minecraft/server/network/PlayerConnection.java
++++ b/src/main/java/net/minecraft/server/network/PlayerConnection.java
+@@ -1224,7 +1224,8 @@ public class PlayerConnection implements PacketListenerPlayIn {
+         if (itemstack.getItem() == Items.WRITABLE_BOOK) {
+             NBTTagList nbttaglist = new NBTTagList();
+ 
+-            list.stream().map(NBTTagString::a).forEach(nbttaglist::add);
++            boolean hasPerm = getPlayer().hasPermission("purpur.book.color.edit"); // Purpur - edit book
++            list.stream().map(s -> s = color(s, hasPerm, false)).map(NBTTagString::a).forEach(nbttaglist::add); // Purpur - edit book
+             ItemStack old = itemstack.cloneItemStack(); // CraftBukkit
+             itemstack.a("pages", (NBTBase) nbttaglist);
+             this.player.inventory.setItem(i, CraftEventFactory.handleEditBookEvent(player, i, old, itemstack)); // CraftBukkit // Paper - Don't ignore result (see other callsite for handleEditBookEvent)
+@@ -1242,13 +1243,14 @@ public class PlayerConnection implements PacketListenerPlayIn {
+                 itemstack1.setTag(nbttagcompound.clone());
+             }
+ 
++            boolean hasPerm = getPlayer().hasPermission("purpur.book.color.edit") || getPlayer().hasPermission("purpur.book.color.sign"); // Purpur
+             itemstack1.a("author", (NBTBase) NBTTagString.a(this.player.getDisplayName().getString()));
+-            itemstack1.a("title", (NBTBase) NBTTagString.a(s));
++            itemstack1.a("title", (NBTBase) NBTTagString.a(color(s, hasPerm))); // Purpur - sign book
+             NBTTagList nbttaglist = new NBTTagList();
+             Iterator iterator = list.iterator();
+ 
+             while (iterator.hasNext()) {
+-                String s1 = (String) iterator.next();
++                String s1 = color((String) iterator.next(), hasPerm);// Purpur - sign book
+                 ChatComponentText chatcomponenttext = new ChatComponentText(s1);
+                 String s2 = IChatBaseComponent.ChatSerializer.a((IChatBaseComponent) chatcomponenttext);
+ 
+@@ -1260,6 +1262,16 @@ public class PlayerConnection implements PacketListenerPlayIn {
+         }
+     }
+ 
++    // Purpur start
++    private String color(String str, boolean hasPerm) {
++        return color(str, hasPerm, true);
++    }
++
++    private String color(String str, boolean hasPerm, boolean parseHex) {
++        return hasPerm ? org.bukkit.ChatColor.color(str, parseHex) : str;
++    }
++    // Purpur end
++
+     @Override
+     public void a(PacketPlayInEntityNBTQuery packetplayinentitynbtquery) {
+         PlayerConnectionUtils.ensureMainThread(packetplayinentitynbtquery, this, this.player.getWorldServer());

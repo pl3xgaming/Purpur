@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: James Lyne <jim+github@not-null.co.uk>
+Date: Mon, 7 Dec 2020 17:52:36 +0000
+Subject: [PATCH] [PERF] Spread out and optimise player list ticks
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/server/players/PlayerList.java b/src/main/java/net/minecraft/server/players/PlayerList.java
+index 80f6a4e7204bceca3f312fe5c8d572f971a7fa4b..62f2033606170248f07f7683688b8a11ca3bd302 100644
+--- a/src/main/java/net/minecraft/server/players/PlayerList.java
++++ b/src/main/java/net/minecraft/server/players/PlayerList.java
+@@ -151,7 +151,7 @@ public abstract class PlayerList {
+     private int viewDistance;
+     private EnumGamemode u;
+     private boolean v;
+-    private int w;
++    private int w; private int getTick() { return this.w; } private int setTick(int i) { return this.w = i; } // Purpur - OBFHELPER
+ 
+     // CraftBukkit start
+     private CraftServer cserver;
+@@ -1029,22 +1029,23 @@ public abstract class PlayerList {
+     }
+ 
+     public void tick() {
+-        if (++this.w > 600) {
+-            // CraftBukkit start
+-            for (int i = 0; i < this.players.size(); ++i) {
+-                final EntityPlayer target = (EntityPlayer) this.players.get(i);
+-
+-                target.playerConnection.sendPacket(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.UPDATE_LATENCY, Iterables.filter(this.players, new Predicate<EntityPlayer>() {
+-                    @Override
+-                    public boolean apply(EntityPlayer input) {
+-                        return target.getBukkitEntity().canSee(input.getBukkitEntity());
+-                    }
+-                })));
++        // Purpur start
++        int tick = getTick();
++        if (tick < this.players.size()) {
++            final org.bukkit.craftbukkit.entity.CraftPlayer target = this.players.get(tick).getBukkitEntity();
++            final java.util.List<EntityPlayer> list = new java.util.ArrayList<>();
++            for (EntityPlayer entityplayer : this.players) {
++                if (target.canSee(entityplayer.getUniqueID())) {
++                    list.add(entityplayer);
++                }
+             }
+-            // CraftBukkit end
+-            this.w = 0;
++            target.getHandle().playerConnection.sendPacket(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.UPDATE_LATENCY, list));
+         }
+-
++        if (++tick > 600) {
++            tick = 0;
++        }
++        setTick(tick);
++        // Purpur end
+     }
+ 
+     public void sendAll(Packet<?> packet) {
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index b7180dea1d71a68e4025388916600093dfd000c7..8cc2b2b83ad3cb74f8cf7916141ae1f4ade27908 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -1447,7 +1447,13 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+ 
+     @Override
+     public boolean canSee(Player player) {
+-        return !hiddenPlayers.containsKey(player.getUniqueId());
++        // Purpur start
++        return canSee(player.getUniqueId());
++    }
++
++    public boolean canSee(UUID uuid) {
++        return !hiddenPlayers.containsKey(uuid);
++        // Purpur end
+     }
+ 
+     @Override

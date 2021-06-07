@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Aikar <aikar@aikar.co>
+Date: Thu, 14 Jan 2016 00:49:14 -0500
+Subject: [PATCH] [FEAT] EMC - Configurable disable give dropping
+
+Modified version of a patch by Aikar from EMC. Adds a config option in
+purpur.yml to disable the /give command from dropping items on the
+floor when a player's inventory is full.
+
+diff --git a/src/main/java/net/minecraft/server/commands/CommandGive.java b/src/main/java/net/minecraft/server/commands/CommandGive.java
+index a10207f7cb9455e29db7e6906cb2138ad5609a1f..9557fd12f87e7e825501759598eaee75cd3891ac 100644
+--- a/src/main/java/net/minecraft/server/commands/CommandGive.java
++++ b/src/main/java/net/minecraft/server/commands/CommandGive.java
+@@ -47,6 +47,7 @@ public class CommandGive {
+                 boolean flag = entityplayer.inventory.pickup(itemstack);
+                 EntityItem entityitem;
+ 
++                if (net.pl3x.purpur.PurpurConfig.disableGiveCommandDrops) continue; // Purpur - add config option for toggling give command dropping
+                 if (flag && itemstack.isEmpty()) {
+                     itemstack.setCount(1);
+                     entityitem = entityplayer.drop(itemstack, false, false, true); // Paper - Fix duplicating /give items on item drop cancel
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 8a1311eeb2504bc9708403686518ea38bf598c71..f4fab86ed176aea7d5fca3836e76f53e6101575f 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -193,6 +193,11 @@ public class PurpurConfig {
+         useAlternateKeepAlive = getBoolean("settings.use-alternate-keepalive", useAlternateKeepAlive);
+     }
+ 
++    public static boolean disableGiveCommandDrops = false;
++    private static void disableGiveCommandDrops() {
++        disableGiveCommandDrops = getBoolean("settings.disable-give-dropping", disableGiveCommandDrops);
++    }
++
+     public static boolean barrelSixRows = false;
+     public static boolean enderChestSixRows = false;
+     public static boolean enderChestPermissionRows = false;

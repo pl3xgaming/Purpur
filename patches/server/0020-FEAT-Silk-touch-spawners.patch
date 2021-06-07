@@ -1,0 +1,268 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Thu, 9 May 2019 14:27:37 -0500
+Subject: [PATCH] [FEAT] Silk touch spawners
+
+Adds the ability to mine spawner cages using tools with silk touch enchantment, and
+the ability to place those spawner cages back down without them reverting to pig spawners.
+
+Note: Some plugins may interfere with this (Essentials, CMI, etc). Server admins will have
+to bypass those plugins' features using whatever method is available to them.
+
+$-----------------------------$
+gameplay-mechanics:
+  silk-touch:
+    enabled:
+      default: false
+      description: |-
+        Make it so spawners can be picked up by using the silk touch enchantment
+
+        Requires the purpur.drop.spawners and purpur.place.spawners permissions
+    spawner-name:
+      default: Spawner
+      description: |-
+        The name of the spawner
+    spawner-lore:
+      default: |-
+        - Spawns a {mob}
+      description: |-
+        The lore of the spawner
+    tools:
+      default: |-
+        - minecraft:iron_pickaxe
+        - minecraft:golden_pickaxe
+        - minecraft:diamond_pickaxe
+        - minecraft:netherite_pickaxe
+      description: |-
+        The whitelist of tools that can pick up spawners if they the have silk touch enchantment
+$-----------------------------$
+
+diff --git a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
+index 7b14b3c2486f03778d4673cf9684aa576dc2724a..822ffa8e4b554fd6aa7ce1b2bb68c198c863d86c 100644
+--- a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
++++ b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
+@@ -81,6 +81,7 @@ public final class PaperAdventure {
+         })
+         .build();
+     public static final LegacyComponentSerializer LEGACY_SECTION_UXRC = LegacyComponentSerializer.builder().flattener(FLATTENER).hexColors().useUnusualXRepeatedCharacterHexFormat().build();
++    public static final LegacyComponentSerializer LEGACY_AMPERSAND = LegacyComponentSerializer.builder().character(LegacyComponentSerializer.AMPERSAND_CHAR).hexColors().build(); // Purpur
+     public static final PlainComponentSerializer PLAIN = PlainComponentSerializer.builder().flattener(FLATTENER).build();
+     public static final GsonComponentSerializer GSON = GsonComponentSerializer.builder()
+         .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.INSTANCE)
+diff --git a/src/main/java/net/minecraft/server/ItemSpawner.java b/src/main/java/net/minecraft/server/ItemSpawner.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..599672ed4d0fc412ad3c0fa2e9d9df7035694fa2
+--- /dev/null
++++ b/src/main/java/net/minecraft/server/ItemSpawner.java
+@@ -0,0 +1,35 @@
++package net.minecraft.server;
++
++import net.minecraft.core.BlockPosition;
++import net.minecraft.nbt.NBTTagCompound;
++import net.minecraft.world.entity.EntityTypes;
++import net.minecraft.world.entity.player.EntityHuman;
++import net.minecraft.world.item.ItemBlock;
++import net.minecraft.world.item.ItemStack;
++import net.minecraft.world.level.World;
++import net.minecraft.world.level.block.Block;
++import net.minecraft.world.level.block.entity.TileEntity;
++import net.minecraft.world.level.block.entity.TileEntityMobSpawner;
++import net.minecraft.world.level.block.state.IBlockData;
++
++public class ItemSpawner extends ItemBlock {
++    public ItemSpawner(Block block, Info info) {
++        super(block, info);
++    }
++
++    @Override
++    protected boolean a(BlockPosition blockposition, World world, EntityHuman entityhuman, ItemStack itemstack, IBlockData iblockdata) {
++        boolean handled = super.a(blockposition, world, entityhuman, itemstack, iblockdata);
++        if (world.purpurConfig.silkTouchEnabled && entityhuman.getBukkitEntity().hasPermission("purpur.place.spawners")) {
++            TileEntity spawner = world.getTileEntity(blockposition);
++            if (spawner instanceof TileEntityMobSpawner && itemstack.hasTag()) {
++                NBTTagCompound tag = itemstack.getTag();
++                if (tag.hasKey("Purpur.mob_type")) {
++                    EntityTypes.getByName(tag.getString("Purpur.mob_type")).ifPresent(type ->
++                            ((TileEntityMobSpawner) spawner).getSpawner().setMobName(type));
++                }
++            }
++        }
++        return handled;
++    }
++}
+diff --git a/src/main/java/net/minecraft/world/item/Items.java b/src/main/java/net/minecraft/world/item/Items.java
+index fc5cc610e7ea584ce72600b9d9f47543265725bb..8e9a25495d76251a86268d3059e2960a86dc46b3 100644
+--- a/src/main/java/net/minecraft/world/item/Items.java
++++ b/src/main/java/net/minecraft/world/item/Items.java
+@@ -2,6 +2,7 @@ package net.minecraft.world.item;
+ 
+ import net.minecraft.core.IRegistry;
+ import net.minecraft.resources.MinecraftKey;
++import net.minecraft.server.ItemSpawner;
+ import net.minecraft.sounds.SoundEffects;
+ import net.minecraft.world.entity.EntityTypes;
+ import net.minecraft.world.entity.EnumItemSlot;
+@@ -193,7 +194,7 @@ public class Items {
+     public static final Item ct = a(Blocks.PURPUR_BLOCK, CreativeModeTab.b);
+     public static final Item cu = a(Blocks.PURPUR_PILLAR, CreativeModeTab.b);
+     public static final Item cv = a(Blocks.PURPUR_STAIRS, CreativeModeTab.b);
+-    public static final Item cw = a(Blocks.SPAWNER);
++    public static final Item cw = a(Blocks.SPAWNER, new ItemSpawner(Blocks.SPAWNER, new Item.Info().a(EnumItemRarity.EPIC))); // Purpur
+     public static final Item cx = a(Blocks.OAK_STAIRS, CreativeModeTab.b);
+     public static final Item cy = a(Blocks.CHEST, CreativeModeTab.c);
+     public static final Item cz = a(Blocks.DIAMOND_ORE, CreativeModeTab.b);
+diff --git a/src/main/java/net/minecraft/world/level/block/BlockMobSpawner.java b/src/main/java/net/minecraft/world/level/block/BlockMobSpawner.java
+index 287dd5f1b2b913df4029966860cd1a426947b187..af3c1a6307fb9e244226794508382d2ffa2aeb4b 100644
+--- a/src/main/java/net/minecraft/world/level/block/BlockMobSpawner.java
++++ b/src/main/java/net/minecraft/world/level/block/BlockMobSpawner.java
+@@ -1,14 +1,35 @@
+ package net.minecraft.world.level.block;
+ 
+ import net.minecraft.core.BlockPosition;
++import net.minecraft.nbt.NBTTagCompound;
++import net.minecraft.nbt.NBTTagList;
++import net.minecraft.nbt.NBTTagString;
++import net.minecraft.resources.MinecraftKey;
+ import net.minecraft.server.level.WorldServer;
++import net.minecraft.world.entity.EntityTypes;
++import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.item.ItemStack;
++import net.minecraft.world.item.enchantment.EnchantmentManager;
++import net.minecraft.world.item.enchantment.Enchantments;
+ import net.minecraft.world.level.IBlockAccess;
++import net.minecraft.world.level.World;
+ import net.minecraft.world.level.block.entity.TileEntity;
+ import net.minecraft.world.level.block.entity.TileEntityMobSpawner;
+ import net.minecraft.world.level.block.state.BlockBase;
+ import net.minecraft.world.level.block.state.IBlockData;
+ 
++// Purpur start
++import io.papermc.paper.adventure.PaperAdventure;
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.TextReplacementConfig;
++import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
++import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
++
++import java.util.List;
++
++import static net.kyori.adventure.text.format.TextDecoration.ITALIC;
++// Purpur end
++
+ public class BlockMobSpawner extends BlockTileEntity {
+ 
+     protected BlockMobSpawner(BlockBase.Info blockbase_info) {
+@@ -20,6 +41,59 @@ public class BlockMobSpawner extends BlockTileEntity {
+         return new TileEntityMobSpawner();
+     }
+ 
++    // Purpur start
++    @Override
++    public void a(World world, EntityHuman entityhuman, BlockPosition blockposition, IBlockData iblockdata, TileEntity tileentity, ItemStack itemstack) {
++        if (world.purpurConfig.silkTouchEnabled && entityhuman.getBukkitEntity().hasPermission("purpur.drop.spawners") && isSilkTouch(world, itemstack)) {
++            MinecraftKey type = ((TileEntityMobSpawner) tileentity).getSpawner().getMobName();
++            if (type != null) {
++                final Component mobName = PaperAdventure.asAdventure(EntityTypes.getFromKey(type).getNameComponent());
++                final TextReplacementConfig config = TextReplacementConfig.builder()
++                        .matchLiteral("{mob}")
++                        .replacement(mobName)
++                        .build();
++
++                NBTTagCompound display = new NBTTagCompound();
++                boolean customDisplay = false;
++
++                String name = world.purpurConfig.silkTouchSpawnerName;
++                if (name != null && !name.isEmpty() && !name.equals("Spawner")) {
++                    final Component displayName = PaperAdventure.LEGACY_AMPERSAND.deserialize(name).replaceText(config).decoration(ITALIC, false);
++                    display.set("Name", NBTTagString.create(GsonComponentSerializer.gson().serialize(displayName)));
++                    customDisplay = true;
++                }
++
++                List<String> lore = world.purpurConfig.silkTouchSpawnerLore;
++                if (lore != null && !lore.isEmpty()) {
++                    NBTTagList list = new NBTTagList();
++                    for (String line : lore) {
++                        final Component lineComponent = PaperAdventure.LEGACY_AMPERSAND.deserialize(line).replaceText(config).decoration(ITALIC, false);
++                        list.add(NBTTagString.create(GsonComponentSerializer.gson().serialize(lineComponent)));
++                    }
++                    display.set("Lore", list);
++                    customDisplay = true;
++                }
++
++                NBTTagCompound tag = new NBTTagCompound();
++                if (customDisplay) {
++                    tag.set("display", display);
++                }
++                tag.setString("Purpur.mob_type", type.toString());
++
++                ItemStack item = new ItemStack(Blocks.SPAWNER.getItem());
++                item.setTag(tag);
++
++                dropItem(world, blockposition, item);
++            }
++        }
++        super.a(world, entityhuman, blockposition, iblockdata, tileentity, itemstack);
++    }
++
++    private boolean isSilkTouch(World world, ItemStack itemstack) {
++        return itemstack != null && world.purpurConfig.silkTouchTools.contains(itemstack.getItem()) && EnchantmentManager.getEnchantmentLevel(Enchantments.SILK_TOUCH, itemstack) > 0;
++    }
++    // Purpur end
++
+     @Override
+     public void dropNaturally(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, ItemStack itemstack) {
+         super.dropNaturally(iblockdata, worldserver, blockposition, itemstack);
+@@ -32,6 +106,7 @@ public class BlockMobSpawner extends BlockTileEntity {
+ 
+     @Override
+     public int getExpDrop(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, ItemStack itemstack) {
++        if (isSilkTouch(worldserver, itemstack)) return 0; // Purpur
+         int i = 15 + worldserver.random.nextInt(15) + worldserver.random.nextInt(15);
+ 
+         return i;
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index c7fb5a737cab0083c39732247acb8f4e87562894..10a6fcd70869719ed2b2d1442a83ab912e00c898 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -1,6 +1,12 @@
+ package net.pl3x.purpur;
+ 
++import net.minecraft.core.IRegistry;
++import net.minecraft.world.item.Item;
++import net.minecraft.world.item.Items;
++import net.minecraft.resources.MinecraftKey;
+ import org.bukkit.configuration.ConfigurationSection;
++
++import java.util.ArrayList;
+ import java.util.List;
+ import static net.pl3x.purpur.PurpurConfig.log;
+ 
+@@ -75,6 +81,29 @@ public class PurpurWorldConfig {
+         playerInvulnerableWhileAcceptingResourcePack = getBoolean("gameplay-mechanics.player.invulnerable-while-accepting-resource-pack", playerInvulnerableWhileAcceptingResourcePack);
+     }
+ 
++    public boolean silkTouchEnabled = false;
++    public String silkTouchSpawnerName = "Spawner";
++    public List<String> silkTouchSpawnerLore = new ArrayList<>();
++    public List<Item> silkTouchTools = new ArrayList<>();
++    private void silkTouchSettings() {
++        silkTouchEnabled = getBoolean("gameplay-mechanics.silk-touch.enabled", silkTouchEnabled);
++        silkTouchSpawnerName = getString("gameplay-mechanics.silk-touch.spawner-name", silkTouchSpawnerName);
++        silkTouchSpawnerLore.clear();
++        getList("gameplay-mechanics.silk-touch.spawner-lore", new ArrayList<String>(){{
++            add("Spawns a {mob}");
++        }}).forEach(line -> silkTouchSpawnerLore.add(line.toString()));
++        silkTouchTools.clear();
++        getList("gameplay-mechanics.silk-touch.tools", new ArrayList<String>(){{
++            add("minecraft:iron_pickaxe");
++            add("minecraft:golden_pickaxe");
++            add("minecraft:diamond_pickaxe");
++            add("minecraft:netherite_pickaxe");
++        }}).forEach(key -> {
++            Item item = IRegistry.ITEM.get(new MinecraftKey(key.toString()));
++            if (item != Items.AIR) silkTouchTools.add(item);
++        });
++    }
++
+     public int villagerBrainTicks = 1;
+     public boolean villagerUseBrainTicksOnlyWhenLagging = true;
+     private void villagerSettings() {

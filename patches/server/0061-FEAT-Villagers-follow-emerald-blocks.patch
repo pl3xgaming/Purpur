@@ -1,0 +1,111 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Fri, 29 Nov 2019 22:10:12 -0600
+Subject: [PATCH] [FEAT] Villagers follow emerald blocks
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  villager:
+    follow-emerald-blocks:
+      default: false
+      description: |-
+        villagers will be tempted by emerald blocks and follow players holding them
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java b/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
+index c45e6ae3f912ac582c6ba693517e05cd8fbf33e2..284401de0e8f4e4cf6df64a8f2b619c10e937130 100644
+--- a/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
++++ b/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
+@@ -59,6 +59,7 @@ import net.minecraft.world.entity.ai.BehaviorController;
+ import net.minecraft.world.entity.ai.attributes.AttributeProvider;
+ import net.minecraft.world.entity.ai.attributes.GenericAttributes;
+ import net.minecraft.world.entity.ai.behavior.Behaviors;
++import net.minecraft.world.entity.ai.goal.PathfinderGoalTempt;
+ import net.minecraft.world.entity.ai.gossip.Reputation;
+ import net.minecraft.world.entity.ai.gossip.ReputationType;
+ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+@@ -143,6 +144,13 @@ public class EntityVillager extends EntityVillagerAbstract implements Reputation
+         this.brainTickOffset = getRandom().nextInt(100); // Purpur
+     }
+ 
++    // Purpur start
++    @Override
++    protected void initPathfinder() {
++        if (world.purpurConfig.villagerFollowEmeraldBlock) this.goalSelector.a(3, new PathfinderGoalTempt(this, 1.0D, false, TEMPT_ITEMS));
++    }
++    // Purpur end
++
+     @Override
+     public BehaviorController<EntityVillager> getBehaviorController() {
+         return (BehaviorController<EntityVillager>) super.getBehaviorController(); // CraftBukkit - decompile error
+diff --git a/src/main/java/net/minecraft/world/entity/npc/EntityVillagerAbstract.java b/src/main/java/net/minecraft/world/entity/npc/EntityVillagerAbstract.java
+index 49821f0f26864c35be84a4a4288857a04668fbba..91142526187f96615b5cbd3ed3b68d9175cb9f8b 100644
+--- a/src/main/java/net/minecraft/world/entity/npc/EntityVillagerAbstract.java
++++ b/src/main/java/net/minecraft/world/entity/npc/EntityVillagerAbstract.java
+@@ -25,11 +25,13 @@ import net.minecraft.world.entity.EnumMobSpawn;
+ import net.minecraft.world.entity.GroupDataEntity;
+ import net.minecraft.world.entity.player.EntityHuman;
+ import net.minecraft.world.item.ItemStack;
++import net.minecraft.world.item.crafting.RecipeItemStack;
+ import net.minecraft.world.item.trading.IMerchant;
+ import net.minecraft.world.item.trading.MerchantRecipe;
+ import net.minecraft.world.item.trading.MerchantRecipeList;
+ import net.minecraft.world.level.World;
+ import net.minecraft.world.level.WorldAccess;
++import net.minecraft.world.level.block.Blocks;
+ import net.minecraft.world.level.pathfinder.PathType;
+ 
+ // CraftBukkit start
+@@ -45,6 +47,8 @@ import io.papermc.paper.event.player.PlayerTradeEvent;
+ 
+ public abstract class EntityVillagerAbstract extends EntityAgeable implements NPC, IMerchant {
+ 
++    static final RecipeItemStack TEMPT_ITEMS = RecipeItemStack.a(Blocks.EMERALD_BLOCK.getItem()); // Purpur
++
+     // CraftBukkit start
+     private CraftMerchant craftMerchant;
+ 
+diff --git a/src/main/java/net/minecraft/world/entity/npc/EntityVillagerTrader.java b/src/main/java/net/minecraft/world/entity/npc/EntityVillagerTrader.java
+index 69044827ed6b34924ffd89a977afa06df0dcefc3..6fab69bf5800ef8a37f29c3b6b2103051f36fedf 100644
+--- a/src/main/java/net/minecraft/world/entity/npc/EntityVillagerTrader.java
++++ b/src/main/java/net/minecraft/world/entity/npc/EntityVillagerTrader.java
+@@ -26,6 +26,7 @@ import net.minecraft.world.entity.ai.goal.PathfinderGoalLookAtTradingPlayer;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalMoveTowardsRestriction;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalPanic;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalRandomStrollLand;
++import net.minecraft.world.entity.ai.goal.PathfinderGoalTempt;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalTradeWithPlayer;
+ import net.minecraft.world.entity.ai.goal.PathfinderGoalUseItem;
+ import net.minecraft.world.entity.monster.EntityEvoker;
+@@ -89,6 +90,7 @@ public class EntityVillagerTrader extends EntityVillagerAbstract {
+         this.goalSelector.a(1, new PathfinderGoalPanic(this, 0.5D));
+         this.goalSelector.a(1, new PathfinderGoalLookAtTradingPlayer(this));
+         this.goalSelector.a(2, new EntityVillagerTrader.a(this, 2.0D, 0.35D));
++        if (world.purpurConfig.villagerTraderFollowEmeraldBlock) this.goalSelector.a(3, new PathfinderGoalTempt(this, 1.0D, false, TEMPT_ITEMS)); // Purpur
+         this.goalSelector.a(4, new PathfinderGoalMoveTowardsRestriction(this, 0.35D));
+         this.goalSelector.a(8, new PathfinderGoalRandomStrollLand(this, 0.35D));
+         this.goalSelector.a(9, new PathfinderGoalInteract(this, EntityHuman.class, 3.0F, 1.0F));
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index e82485ee1270ce83ccc93825d795743d4ead23a1..2eaef857f474c05ef1b4aac4870222d2464da949 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -320,10 +320,17 @@ public class PurpurWorldConfig {
+     public int villagerBrainTicks = 1;
+     public boolean villagerUseBrainTicksOnlyWhenLagging = true;
+     public boolean villagerFarmingBypassMobGriefing = false;
++    public boolean villagerFollowEmeraldBlock = false;
+     private void villagerSettings() {
+         villagerBrainTicks = getInt("mobs.villager.brain-ticks", villagerBrainTicks);
+         villagerUseBrainTicksOnlyWhenLagging = getBoolean("mobs.villager.use-brain-ticks-only-when-lagging", villagerUseBrainTicksOnlyWhenLagging);
+         villagerFarmingBypassMobGriefing = getBoolean("mobs.villager.bypass-mob-griefing", villagerFarmingBypassMobGriefing);
++        villagerFollowEmeraldBlock = getBoolean("mobs.villager.follow-emerald-blocks", villagerFollowEmeraldBlock);
++    }
++
++    public boolean villagerTraderFollowEmeraldBlock = false;
++    private void villagerTraderSettings() {
++        villagerTraderFollowEmeraldBlock = getBoolean("mobs.wandering_trader.follow-emerald-blocks", villagerTraderFollowEmeraldBlock);
+     }
+ 
+     public boolean witherSkeletonTakesWitherDamage = false;

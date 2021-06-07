@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Tue, 23 Jul 2019 10:07:16 -0500
+Subject: [PATCH] [FEAT] Lagging threshold
+
+Adds the config option below that lets you determine what level of TPS is considered lagging.
+
+$-----------------------------$
+settings:
+  lagging-threshold:
+    default: 19.0
+    description: |-
+      Purpur keeps track of when it is lagging in order to have the ability to change behaviors accordingly.
+      This value is that threshold when you want to consider the server to be lagging.
+      Right now this is only used for the mob.villager.brain-ticks setting
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 2f3d6acf497b6fa6b497a1b94ba96977ce2e6008..991ac5baf3f10631edb0e60d17c714af1f406a29 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -280,6 +280,7 @@ public abstract class MinecraftServer extends IAsyncTaskHandlerReentrant<TickTas
+     public static final int TICK_TIME = 1000000000 / TPS;
+     private static final int SAMPLE_INTERVAL = 20; // Paper
+     public final double[] recentTps = new double[ 3 ];
++    public boolean lagging = false; // Purpur
+     public final SlackActivityAccountant slackActivityAccountant = new SlackActivityAccountant();
+     // Spigot end
+ 
+@@ -1118,6 +1119,7 @@ public abstract class MinecraftServer extends IAsyncTaskHandlerReentrant<TickTas
+                         recentTps[1] = tps5.getAverage();
+                         recentTps[2] = tps15.getAverage();
+                         // Paper end
++                        lagging = recentTps[0] < net.pl3x.purpur.PurpurConfig.laggingThreshold; // Purpur
+                         tickSection = curTime;
+                     }
+                     // Tuinity - replace logic
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 2442309843bb62e08ae13c46d335c65f7d072510..089ae62c2189fe774796ecc6caf9961d3edb5ea3 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -150,6 +150,11 @@ public class PurpurConfig {
+         if (!TimingsManager.hiddenConfigs.contains("server-ip")) TimingsManager.hiddenConfigs.add("server-ip");
+     }
+ 
++    public static double laggingThreshold = 19.0D;
++    private static void tickLoopSettings() {
++        laggingThreshold = getDouble("settings.lagging-threshold", laggingThreshold);
++    }
++
+     public static boolean barrelSixRows = false;
+     public static boolean enderChestSixRows = false;
+     public static boolean enderChestPermissionRows = false;
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 441a3cbe6321b289f95ea0a269d98d045d4fdffa..4fda0ebca5bb6706103c5aeedc2650d0330352b3 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -2559,5 +2559,10 @@ public final class CraftServer implements Server {
+     public String getServerName() {
+         return getProperties().serverName;
+     }
++
++    @Override
++    public boolean isLagging() {
++        return getServer().lagging;
++    }
+     // Purpur end
+ }

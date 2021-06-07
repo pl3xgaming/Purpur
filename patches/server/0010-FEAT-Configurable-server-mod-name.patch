@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Sat, 21 Mar 2020 11:47:39 -0500
+Subject: [PATCH] [FEAT] Configurable server mod name
+
+Adds a config option that allows you to modify the server name
+
+$-----------------------------$
+settings:
+  server-mod-name:
+    default: Purpur
+    description: |-
+      The server name that shows up when a client is outdated or when someone opens the debug screen [F3]
+
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index b02affc621f1960302d8d40426e676a319b0c227..2f3d6acf497b6fa6b497a1b94ba96977ce2e6008 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -1650,7 +1650,7 @@ public abstract class MinecraftServer extends IAsyncTaskHandlerReentrant<TickTas
+     }
+ 
+     public String getServerModName() {
+-        return "Purpur"; // Purpur // Tuinity // Paper // Spigot // CraftBukkit
++        return net.pl3x.purpur.PurpurConfig.serverModName; // Purpur // Tuinity // Paper // Spigot // CraftBukkit
+     }
+ 
+     public CrashReport b(CrashReport crashreport) {
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index 95b55fb93049c6686e13aab78ba1ae2b2fd5785b..2442309843bb62e08ae13c46d335c65f7d072510 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -139,6 +139,11 @@ public class PurpurConfig {
+         afkTabListPrefix = getString("settings.messages.afk-tab-list-prefix", afkTabListPrefix);
+     }
+ 
++    public static String serverModName = "Purpur";
++    private static void serverModName() {
++        serverModName = getString("settings.server-mod-name", serverModName);
++    }
++
+     public static String timingsUrl = "https://timings.pl3x.net";
+     private static void timingsSettings() {
+         timingsUrl = getString("settings.timings.url", timingsUrl);

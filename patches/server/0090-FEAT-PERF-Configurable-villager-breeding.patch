@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: draycia <lonelyyordle@gmail.com>
+Date: Tue, 31 Mar 2020 23:48:55 -0700
+Subject: [PATCH] [FEAT] [PERF] Configurable villager breeding
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java b/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
+index aaf8d2cd3089adba69c873c4ea62b0e8837b21d6..2ff9dffc0f0b20582f5b3bffd01743ee26c63c20 100644
+--- a/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
++++ b/src/main/java/net/minecraft/world/entity/npc/EntityVillager.java
+@@ -712,7 +712,7 @@ public class EntityVillager extends EntityVillagerAbstract implements Reputation
+ 
+     @Override
+     public boolean canBreed() {
+-        return this.bx + this.fv() >= 12 && this.getAge() == 0;
++        return world.purpurConfig.villagerCanBreed && this.bx + this.fv() >= 12 && this.getAge() == 0; // Purpur
+     }
+ 
+     private boolean fr() {
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 201974ec4db915e5a79ed36625f0870a7ff84207..db5638c4f2b6d672e619c9ba44184b6d9fe113a1 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -517,6 +517,7 @@ public class PurpurWorldConfig {
+     public boolean villagerFollowEmeraldBlock = false;
+     public int villagerSpawnIronGolemRadius = 0;
+     public int villagerSpawnIronGolemLimit = 0;
++    public boolean villagerCanBreed = true;
+     private void villagerSettings() {
+         villagerBrainTicks = getInt("mobs.villager.brain-ticks", villagerBrainTicks);
+         villagerUseBrainTicksOnlyWhenLagging = getBoolean("mobs.villager.use-brain-ticks-only-when-lagging", villagerUseBrainTicksOnlyWhenLagging);
+@@ -525,6 +526,7 @@ public class PurpurWorldConfig {
+         villagerFollowEmeraldBlock = getBoolean("mobs.villager.follow-emerald-blocks", villagerFollowEmeraldBlock);
+         villagerSpawnIronGolemRadius = getInt("mobs.villager.spawn-iron-golem.radius", villagerSpawnIronGolemRadius);
+         villagerSpawnIronGolemLimit = getInt("mobs.villager.spawn-iron-golem.limit", villagerSpawnIronGolemLimit);
++        villagerCanBreed = getBoolean("mobs.villager.can-breed", villagerCanBreed);
+     }
+ 
+     public boolean villagerTraderCanBeLeashed = false;

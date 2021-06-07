@@ -1,0 +1,686 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jmp <jasonpenilla2@me.com>
+Date: Sun, 15 Nov 2020 02:18:15 -0800
+Subject: [PATCH] [FEAT] Make entity breeding times configurable
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/world/entity/ai/behavior/BehaviorMakeLove.java b/src/main/java/net/minecraft/world/entity/ai/behavior/BehaviorMakeLove.java
+index 79989c143fc8393172475e33d356510b3547afb9..d1315f4b6e026f70e04a0b54289fd13b4be17cde 100644
+--- a/src/main/java/net/minecraft/world/entity/ai/behavior/BehaviorMakeLove.java
++++ b/src/main/java/net/minecraft/world/entity/ai/behavior/BehaviorMakeLove.java
+@@ -117,8 +117,10 @@ public class BehaviorMakeLove extends Behavior<EntityVillager> {
+                 return Optional.empty();
+             }
+             // CraftBukkit end
+-            entityvillager.setAgeRaw(6000);
+-            entityvillager1.setAgeRaw(6000);
++            // Purpur start
++            entityvillager.setAgeRaw(worldserver.purpurConfig.villagerBreedingTicks);
++            entityvillager1.setAgeRaw(worldserver.purpurConfig.villagerBreedingTicks);
++            // Purpur end
+             worldserver.addAllEntities(entityvillager2, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.BREEDING); // CraftBukkit - added SpawnReason
+             worldserver.broadcastEntityEffect(entityvillager2, (byte) 12);
+             return Optional.of(entityvillager2);
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityAnimal.java b/src/main/java/net/minecraft/world/entity/animal/EntityAnimal.java
+index 94b5874c1eb90c02a557179a2a1170b1da85deb4..181bb648dd32f71c7f9d3fbb4974e2a1afba61ac 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityAnimal.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityAnimal.java
+@@ -38,6 +38,7 @@ public abstract class EntityAnimal extends EntityAgeable {
+     public int loveTicks;
+     public UUID breedCause;
+     public ItemStack breedItem; // CraftBukkit - Add breedItem variable
++    public abstract int getPurpurBreedTime(); // Purpur
+ 
+     protected EntityAnimal(EntityTypes<? extends EntityAnimal> entitytypes, World world) {
+         super(entitytypes, world);
+@@ -261,8 +262,10 @@ public abstract class EntityAnimal extends EntityAgeable {
+                 CriterionTriggers.o.a(entityplayer, this, entityanimal, entityageable);
+             }
+ 
+-            this.setAgeRaw(6000);
+-            entityanimal.setAgeRaw(6000);
++            // Purpur start
++            this.setAgeRaw(this.getPurpurBreedTime());
++            entityanimal.setAgeRaw(entityanimal.getPurpurBreedTime());
++            // Purpur end
+             this.resetLove();
+             entityanimal.resetLove();
+             worldserver.addAllEntities(entityageable, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.BREEDING); // CraftBukkit - added SpawnReason
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityBee.java b/src/main/java/net/minecraft/world/entity/animal/EntityBee.java
+index bcd510e0bf647a240edfaac1348119c5e1d7dc42..6086dda5b06f0c0e02734edf7141b13715420d3c 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityBee.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityBee.java
+@@ -175,6 +175,11 @@ public class EntityBee extends EntityAnimal implements IEntityAngerable, EntityB
+             setMot(mot.a(0.9D));
+         }
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.beeBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityCat.java b/src/main/java/net/minecraft/world/entity/animal/EntityCat.java
+index bac3035e2382df2d79e592b02395753eee08fa4b..187047de5530ccec1e9804f8039839246ab248f3 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityCat.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityCat.java
+@@ -122,6 +122,11 @@ public class EntityCat extends EntityTameableAnimal {
+         setSleepingWithOwner(false);
+         setHeadDown(false);
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.catBreedingTicks;
++    }
+     // Purpur end
+ 
+     public MinecraftKey eU() {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityChicken.java b/src/main/java/net/minecraft/world/entity/animal/EntityChicken.java
+index 5c744f1eac19e144c39a2c146d312f0547d6e589..ab54e809f735cea7d84366d2bc205351f8992bef 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityChicken.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityChicken.java
+@@ -71,6 +71,11 @@ public class EntityChicken extends EntityAnimal {
+             this.getAttributeInstance(GenericAttributes.ATTACK_DAMAGE).setValue(2.0D);
+         }
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.chickenBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityCow.java b/src/main/java/net/minecraft/world/entity/animal/EntityCow.java
+index b2d3fc3151a952ac783101443772736a206a6a3b..7ed55ebe1bb768351a5cb4cdc7d4d3b0816d53b1 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityCow.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityCow.java
+@@ -54,6 +54,11 @@ public class EntityCow extends EntityAnimal {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.cowRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.cowBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityFox.java b/src/main/java/net/minecraft/world/entity/animal/EntityFox.java
+index 7b1a6d846f25d8bc659a541fce59df79347ba9bc..70369d03985250fa5eaf398fa98d35a2c2a06ff1 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityFox.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityFox.java
+@@ -157,6 +157,11 @@ public class EntityFox extends EntityAnimal {
+         super.onDismount(entityhuman);
+         setCanPickupLoot(true);
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.foxBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+@@ -1373,8 +1378,10 @@ public class EntityFox extends EntityAnimal {
+                     CriterionTriggers.o.a(entityplayer2, this.animal, this.partner, (EntityAgeable) entityfox);
+                 }
+ 
+-                this.animal.setAgeRaw(6000);
+-                this.partner.setAgeRaw(6000);
++                // Purpur start
++                this.animal.setAgeRaw(this.animal.getPurpurBreedTime());
++                this.partner.setAgeRaw(this.partner.getPurpurBreedTime());
++                // Purpur end
+                 this.animal.resetLove();
+                 this.partner.resetLove();
+                 worldserver.addAllEntities(entityfox, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.BREEDING); // CraftBukkit - added SpawnReason
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityMushroomCow.java b/src/main/java/net/minecraft/world/entity/animal/EntityMushroomCow.java
+index 815e907e8db721f2a6f0f831b69c44a9573b5c9b..ab4a8ee6e1912f230cbf3353eb42c3bc8a9db58e 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityMushroomCow.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityMushroomCow.java
+@@ -67,6 +67,11 @@ public class EntityMushroomCow extends EntityCow implements IShearable {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.mooshroomRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.mooshroomBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityOcelot.java b/src/main/java/net/minecraft/world/entity/animal/EntityOcelot.java
+index d7938ff0dca305f1d47fdfdbc57648892debe367..cff2ff5a8beef739f0515832e072e7e390ac388f 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityOcelot.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityOcelot.java
+@@ -74,6 +74,11 @@ public class EntityOcelot extends EntityAnimal {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.ocelotRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.ocelotBreedingTicks;
++    }
+     // Purpur end
+ 
+     private boolean isTrusting() {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityPanda.java b/src/main/java/net/minecraft/world/entity/animal/EntityPanda.java
+index 0d912399e1975d9c0d5525f5b89049f40e7efcc0..e6952c0a8d90eb4b133c517d97299f2c3db7e329 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityPanda.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityPanda.java
+@@ -121,6 +121,11 @@ public class EntityPanda extends EntityAnimal {
+         this.setEating(false);
+         this.setLayingOnBack(false);
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.pandaBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityParrot.java b/src/main/java/net/minecraft/world/entity/animal/EntityParrot.java
+index 9f705b75a14ba456808485ce4ddef9550aac3fe9..7346921a24bdd57aa3814386bc372b082b23b4bc 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityParrot.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityParrot.java
+@@ -171,6 +171,11 @@ public class EntityParrot extends EntityPerchable implements EntityBird {
+             setMot(mot.a(0.9D));
+         }
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return 6000;
++    }
+     // Purpur end
+ 
+     @Nullable
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityPig.java b/src/main/java/net/minecraft/world/entity/animal/EntityPig.java
+index cef69f99d7bc9b6605b9654c50f43a1ebc1a8509..5aa8806063186bec36b38adc51e2ea82bf6ff21a 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityPig.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityPig.java
+@@ -77,6 +77,11 @@ public class EntityPig extends EntityAnimal implements ISteerable, ISaddleable {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.pigRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.pigBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java b/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java
+index b46315700b8857318b03b83097fcf829047f8ca4..c9c7c9de638079393bbea86f8069023dcbcbca83 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityPolarBear.java
+@@ -116,6 +116,11 @@ public class EntityPolarBear extends EntityAnimal implements IEntityAngerable {
+             return this.isInLove() && polarbear.isInLove();
+         }
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.polarBearBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityRabbit.java b/src/main/java/net/minecraft/world/entity/animal/EntityRabbit.java
+index 4660f37bc89418e0c3767305d390a53f5c0d3c55..465701232567e4058f9dfc776560ccde33fee66c 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityRabbit.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityRabbit.java
+@@ -85,6 +85,11 @@ public class EntityRabbit extends EntityAnimal {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.rabbitRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.rabbitBreedingTicks;
++    }
+     // Purpur end
+ 
+     // CraftBukkit start - code from constructor
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntitySheep.java b/src/main/java/net/minecraft/world/entity/animal/EntitySheep.java
+index 8f3296031f220dd7bb3ae9fe2443e479954ebad3..ff6fc821085e4430a3b1008140b0b7fcacc59d2e 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntitySheep.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntitySheep.java
+@@ -121,6 +121,11 @@ public class EntitySheep extends EntityAnimal implements IShearable {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.sheepRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.sheepBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityTurtle.java b/src/main/java/net/minecraft/world/entity/animal/EntityTurtle.java
+index 28d6e673f55fc8fae40dff4a96ac2c2b5eeab9d6..a16f586934f24e599d00bf793f06d3f9134ed29d 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityTurtle.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityTurtle.java
+@@ -101,6 +101,11 @@ public class EntityTurtle extends EntityAnimal {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.turtleRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.turtleBreedingTicks;
++    }
+     // Purpur end
+ 
+     public void setHomePos(BlockPosition blockposition) {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/EntityWolf.java b/src/main/java/net/minecraft/world/entity/animal/EntityWolf.java
+index 3fbd8f9122d7a5ac23af4d872f877030644ef86a..dd3c7ad7701ad18ccaf86d73fde7051090ed3d57 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/EntityWolf.java
++++ b/src/main/java/net/minecraft/world/entity/animal/EntityWolf.java
+@@ -107,6 +107,11 @@ public class EntityWolf extends EntityTameableAnimal implements IEntityAngerable
+         super.onMount(entityhuman);
+         setSitting(false);
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.wolfBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorse.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorse.java
+index 650f13b1133e4c61f71b36f3f91a9d2913996435..c830bf6e5e38f5ebacc07673c3d67e4157c8c2b5 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorse.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorse.java
+@@ -46,6 +46,11 @@ public class EntityHorse extends EntityHorseAbstract {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.horseRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.horseBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseDonkey.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseDonkey.java
+index 50700bf85a296b87fe3155651f869e2bbdb0875d..3b44394dcba8e9905aca46e6e585ee6d7a87de44 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseDonkey.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseDonkey.java
+@@ -21,6 +21,11 @@ public class EntityHorseDonkey extends EntityHorseChestedAbstract {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.donkeyRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.donkeyBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseMule.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseMule.java
+index b6385a23050296611dbc8864b92d2cdd8321a1d0..0536112357e0321dbb902331467b847894a4c11b 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseMule.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseMule.java
+@@ -20,6 +20,11 @@ public class EntityHorseMule extends EntityHorseChestedAbstract {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.muleRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.muleBreedingTicks;
++    }
+     // Purpur end
+     @Override
+     protected SoundEffect getSoundAmbient() {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseSkeleton.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseSkeleton.java
+index d21399fbb6ddc4f26a7509ce547f8c4ad6458089..28c6e3745c61d0670bf7f3a324169472250e25f4 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseSkeleton.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseSkeleton.java
+@@ -43,6 +43,11 @@ public class EntityHorseSkeleton extends EntityHorseAbstract {
+     public boolean isTamed() {
+         return true;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return 6000;
++    }
+     // Purpur end
+ 
+     public static AttributeProvider.Builder eL() {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseZombie.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseZombie.java
+index d57e7c02268e5d8a00b0b5897fa03dcee10cd2e0..c776f18722d1aa73f53da66ef6b37564eeaddd2a 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseZombie.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityHorseZombie.java
+@@ -35,6 +35,11 @@ public class EntityHorseZombie extends EntityHorseAbstract {
+     public boolean isTamed() {
+         return true;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return 6000;
++    }
+     // Purpur end
+ 
+     public static AttributeProvider.Builder eL() {
+diff --git a/src/main/java/net/minecraft/world/entity/animal/horse/EntityLlama.java b/src/main/java/net/minecraft/world/entity/animal/horse/EntityLlama.java
+index d25177f9500a084e0f18a20b1eb1c4ac170048ec..2710c246a147f117d2d90014c37988888010dc36 100644
+--- a/src/main/java/net/minecraft/world/entity/animal/horse/EntityLlama.java
++++ b/src/main/java/net/minecraft/world/entity/animal/horse/EntityLlama.java
+@@ -108,6 +108,11 @@ public class EntityLlama extends EntityHorseChestedAbstract implements IRangedEn
+     public boolean hasSaddle() {
+         return super.hasSaddle() || (isTamed() && getColor() != null);
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.llamaBreedingTicks;
++    }
+     // Purpur end
+ 
+     public void setStrength(int i) {
+diff --git a/src/main/java/net/minecraft/world/entity/monster/EntityStrider.java b/src/main/java/net/minecraft/world/entity/monster/EntityStrider.java
+index 14dda6743ed9e6f4880bc560f7ba8892d8e84afe..cba66a08feceeeaf7c123da595fc7b12c5749783 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/EntityStrider.java
++++ b/src/main/java/net/minecraft/world/entity/monster/EntityStrider.java
+@@ -105,6 +105,11 @@ public class EntityStrider extends EntityAnimal implements ISteerable, ISaddleab
+     public boolean isRidableInWater() {
+         return world.purpurConfig.striderRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.striderBreedingTicks;
++    }
+     // Purpur end
+ 
+     public static boolean c(EntityTypes<EntityStrider> entitytypes, GeneratorAccess generatoraccess, EnumMobSpawn enummobspawn, BlockPosition blockposition, Random random) {
+diff --git a/src/main/java/net/minecraft/world/entity/monster/hoglin/EntityHoglin.java b/src/main/java/net/minecraft/world/entity/monster/hoglin/EntityHoglin.java
+index 9bac45983b55abf9b72f2c45f632cdedd48f81f9..9f2af4b37ffb22034b537cc27b42d520a41d4fe7 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/hoglin/EntityHoglin.java
++++ b/src/main/java/net/minecraft/world/entity/monster/hoglin/EntityHoglin.java
+@@ -71,6 +71,11 @@ public class EntityHoglin extends EntityAnimal implements IMonster, IOglin {
+     public boolean isRidableInWater() {
+         return world.purpurConfig.hoglinRidableInWater;
+     }
++
++    @Override
++    public int getPurpurBreedTime() {
++        return this.world.purpurConfig.hoglinBreedingTicks;
++    }
+     // Purpur end
+ 
+     @Override
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index b92715b115332e8197d5a02a2f308a1ab0f447b6..bd37234624a720c1077aabf0123de61a0d4e05cb 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -492,10 +492,12 @@ public class PurpurWorldConfig {
+     public boolean beeRidable = false;
+     public boolean beeRidableInWater = false;
+     public double beeMaxY = 256D;
++    public int beeBreedingTicks = 6000;
+     private void beeSettings() {
+         beeRidable = getBoolean("mobs.bee.ridable", beeRidable);
+         beeRidableInWater = getBoolean("mobs.bee.ridable-in-water", beeRidableInWater);
+         beeMaxY = getDouble("mobs.bee.ridable-max-y", beeMaxY);
++        beeBreedingTicks = getInt("mobs.bee.breeding-delay-ticks", beeBreedingTicks);
+     }
+ 
+     public boolean blazeRidable = false;
+@@ -512,12 +514,14 @@ public class PurpurWorldConfig {
+     public int catSpawnDelay = 1200;
+     public int catSpawnSwampHutScanRange = 16;
+     public int catSpawnVillageScanRange = 48;
++    public int catBreedingTicks = 6000;
+     private void catSettings() {
+         catRidable = getBoolean("mobs.cat.ridable", catRidable);
+         catRidableInWater = getBoolean("mobs.cat.ridable-in-water", catRidableInWater);
+         catSpawnDelay = getInt("mobs.cat.spawn-delay", catSpawnDelay);
+         catSpawnSwampHutScanRange = getInt("mobs.cat.scan-range-for-other-cats.swamp-hut", catSpawnSwampHutScanRange);
+         catSpawnVillageScanRange = getInt("mobs.cat.scan-range-for-other-cats.village", catSpawnVillageScanRange);
++        catBreedingTicks = getInt("mobs.cat.breeding-delay-ticks", catBreedingTicks);
+     }
+ 
+     public boolean caveSpiderRidable = false;
+@@ -530,10 +534,12 @@ public class PurpurWorldConfig {
+     public boolean chickenRidable = false;
+     public boolean chickenRidableInWater = false;
+     public boolean chickenRetaliate = false;
++    public int chickenBreedingTicks = 6000;
+     private void chickenSettings() {
+         chickenRidable = getBoolean("mobs.chicken.ridable", chickenRidable);
+         chickenRidableInWater = getBoolean("mobs.chicken.ridable-in-water", chickenRidableInWater);
+         chickenRetaliate = getBoolean("mobs.chicken.retaliate", chickenRetaliate);
++        chickenBreedingTicks = getInt("mobs.chicken.breeding-delay-ticks", chickenBreedingTicks);
+     }
+ 
+     public boolean codRidable = false;
+@@ -544,10 +550,12 @@ public class PurpurWorldConfig {
+     public boolean cowRidable = false;
+     public boolean cowRidableInWater = false;
+     public int cowFeedMushrooms = 0;
++    public int cowBreedingTicks = 6000;
+     private void cowSettings() {
+         cowRidable = getBoolean("mobs.cow.ridable", cowRidable);
+         cowRidableInWater = getBoolean("mobs.cow.ridable-in-water", cowRidableInWater);
+         cowFeedMushrooms = getInt("mobs.cow.feed-mushrooms-for-mooshroom", cowFeedMushrooms);
++        cowBreedingTicks = getInt("mobs.cow.breeding-delay-ticks", cowBreedingTicks);
+     }
+ 
+     public boolean creeperRidable = false;
+@@ -575,8 +583,10 @@ public class PurpurWorldConfig {
+     }
+ 
+     public boolean donkeyRidableInWater = false;
++    public int donkeyBreedingTicks = 6000;
+     private void donkeySettings() {
+         donkeyRidableInWater = getBoolean("mobs.donkey.ridable-in-water", donkeyRidableInWater);
++        donkeyBreedingTicks = getInt("mobs.donkey.breeding-delay-ticks", donkeyBreedingTicks);
+     }
+ 
+     public boolean drownedRidable = false;
+@@ -634,10 +644,12 @@ public class PurpurWorldConfig {
+     public boolean foxRidable = false;
+     public boolean foxRidableInWater = false;
+     public boolean foxTypeChangesWithTulips = false;
++    public int foxBreedingTicks = 6000;
+     private void foxSettings() {
+         foxRidable = getBoolean("mobs.fox.ridable", foxRidable);
+         foxRidableInWater = getBoolean("mobs.fox.ridable-in-water", foxRidableInWater);
+         foxTypeChangesWithTulips = getBoolean("mobs.fox.tulips-change-type", foxTypeChangesWithTulips);
++        foxBreedingTicks = getInt("mobs.fox.breeding-delay-ticks", foxBreedingTicks);
+     }
+ 
+     public boolean ghastRidable = false;
+@@ -682,14 +694,18 @@ public class PurpurWorldConfig {
+ 
+     public boolean hoglinRidable = false;
+     public boolean hoglinRidableInWater = false;
++    public int hoglinBreedingTicks = 6000;
+     private void hoglinSettings() {
+         hoglinRidable = getBoolean("mobs.hoglin.ridable", hoglinRidable);
+         hoglinRidableInWater = getBoolean("mobs.hoglin.ridable-in-water", hoglinRidableInWater);
++        hoglinBreedingTicks = getInt("mobs.hoglin.breeding-delay-ticks", hoglinBreedingTicks);
+     }
+ 
+     public boolean horseRidableInWater = false;
++    public int horseBreedingTicks = 6000;
+     private void horseSettings() {
+         horseRidableInWater = getBoolean("mobs.horse.ridable-in-water", horseRidableInWater);
++        horseBreedingTicks = getInt("mobs.horse.breeding-delay-ticks", horseBreedingTicks);
+     }
+ 
+     public boolean huskRidable = false;
+@@ -734,9 +750,11 @@ public class PurpurWorldConfig {
+ 
+     public boolean llamaRidable = false;
+     public boolean llamaRidableInWater = false;
++    public int llamaBreedingTicks = 6000;
+     private void llamaSettings() {
+         llamaRidable = getBoolean("mobs.llama.ridable", llamaRidable);
+         llamaRidableInWater = getBoolean("mobs.llama.ridable-in-water", llamaRidableInWater);
++        llamaBreedingTicks = getInt("mobs.llama.breeding-delay-ticks", llamaBreedingTicks);
+     }
+ 
+     public boolean llamaTraderRidable = false;
+@@ -755,28 +773,36 @@ public class PurpurWorldConfig {
+ 
+     public boolean mooshroomRidable = false;
+     public boolean mooshroomRidableInWater = false;
++    public int mooshroomBreedingTicks = 6000;
+     private void mooshroomSettings() {
+         mooshroomRidable = getBoolean("mobs.mooshroom.ridable", mooshroomRidable);
+         mooshroomRidableInWater = getBoolean("mobs.mooshroom.ridable-in-water", mooshroomRidableInWater);
++        mooshroomBreedingTicks = getInt("mobs.mooshroom.breeding-delay-ticks", mooshroomBreedingTicks);
+     }
+ 
+     public boolean muleRidableInWater = false;
++    public int muleBreedingTicks = 6000;
+     private void muleSettings() {
+         muleRidableInWater = getBoolean("mobs.mule.ridable-in-water", muleRidableInWater);
++        muleBreedingTicks = getInt("mobs.mule.breeding-delay-ticks", muleBreedingTicks);
+     }
+ 
+     public boolean ocelotRidable = false;
+     public boolean ocelotRidableInWater = false;
++    public int ocelotBreedingTicks = 6000;
+     private void ocelotSettings() {
+         ocelotRidable = getBoolean("mobs.ocelot.ridable", ocelotRidable);
+         ocelotRidableInWater = getBoolean("mobs.ocelot.ridable-in-water", ocelotRidableInWater);
++        ocelotBreedingTicks = getInt("mobs.ocelot.breeding-delay-ticks", ocelotBreedingTicks);
+     }
+ 
+     public boolean pandaRidable = false;
+     public boolean pandaRidableInWater = false;
++    public int pandaBreedingTicks = 6000;
+     private void pandaSettings() {
+         pandaRidable = getBoolean("mobs.panda.ridable", pandaRidable);
+         pandaRidableInWater = getBoolean("mobs.panda.ridable-in-water", pandaRidableInWater);
++        pandaBreedingTicks = getInt("mobs.panda.breeding-delay-ticks", pandaBreedingTicks);
+     }
+ 
+     public boolean parrotRidable = false;
+@@ -842,10 +868,12 @@ public class PurpurWorldConfig {
+     public boolean pigRidable = false;
+     public boolean pigRidableInWater = false;
+     public boolean pigGiveSaddleBack = false;
++    public int pigBreedingTicks = 6000;
+     private void pigSettings() {
+         pigRidable = getBoolean("mobs.pig.ridable", pigRidable);
+         pigRidableInWater = getBoolean("mobs.pig.ridable-in-water", pigRidableInWater);
+         pigGiveSaddleBack = getBoolean("mobs.pig.give-saddle-back", pigGiveSaddleBack);
++        pigBreedingTicks = getInt("mobs.pig.breeding-delay-ticks", pigBreedingTicks);
+     }
+ 
+     public boolean piglinRidable = false;
+@@ -873,12 +901,14 @@ public class PurpurWorldConfig {
+     public boolean polarBearRidableInWater = false;
+     public String polarBearBreedableItemString = "";
+     public Item polarBearBreedableItem = null;
++    public int polarBearBreedingTicks = 6000;
+     private void polarBearSettings() {
+         polarBearRidable = getBoolean("mobs.polar_bear.ridable", polarBearRidable);
+         polarBearRidableInWater = getBoolean("mobs.polar_bear.ridable-in-water", polarBearRidableInWater);
+         polarBearBreedableItemString = getString("mobs.polar_bear.breedable-item", polarBearBreedableItemString);
+         Item item = IRegistry.ITEM.get(new MinecraftKey(polarBearBreedableItemString));
+         if (item != Items.AIR) polarBearBreedableItem = item;
++        polarBearBreedingTicks = getInt("mobs.polar_bear.breeding-delay-ticks", polarBearBreedingTicks);
+     }
+ 
+     public boolean pufferfishRidable = false;
+@@ -890,11 +920,13 @@ public class PurpurWorldConfig {
+     public boolean rabbitRidableInWater = false;
+     public double rabbitNaturalToast = 0.0D;
+     public double rabbitNaturalKiller = 0.0D;
++    public int rabbitBreedingTicks = 6000;
+     private void rabbitSettings() {
+         rabbitRidable = getBoolean("mobs.rabbit.ridable", rabbitRidable);
+         rabbitRidableInWater = getBoolean("mobs.rabbit.ridable-in-water", rabbitRidableInWater);
+         rabbitNaturalToast = getDouble("mobs.rabbit.spawn-toast-chance", rabbitNaturalToast);
+         rabbitNaturalKiller = getDouble("mobs.rabbit.spawn-killer-rabbit-chance", rabbitNaturalKiller);
++        rabbitBreedingTicks = getInt("mobs.rabbit.breeding-delay-ticks", rabbitBreedingTicks);
+     }
+ 
+     public boolean ravagerRidable = false;
+@@ -911,9 +943,11 @@ public class PurpurWorldConfig {
+ 
+     public boolean sheepRidable = false;
+     public boolean sheepRidableInWater = false;
++    public int sheepBreedingTicks = 6000;
+     private void sheepSettings() {
+         sheepRidable = getBoolean("mobs.sheep.ridable", sheepRidable);
+         sheepRidableInWater = getBoolean("mobs.sheep.ridable-in-water", sheepRidableInWater);
++        sheepBreedingTicks = getInt("mobs.sheep.breeding-delay-ticks", sheepBreedingTicks);
+     }
+ 
+     public boolean shulkerRidable = false;
+@@ -991,9 +1025,11 @@ public class PurpurWorldConfig {
+ 
+     public boolean striderRidable = false;
+     public boolean striderRidableInWater = false;
++    public int striderBreedingTicks = 6000;
+     private void striderSettings() {
+         striderRidable = getBoolean("mobs.strider.ridable", striderRidable);
+         striderRidableInWater = getBoolean("mobs.strider.ridable-in-water", striderRidableInWater);
++        striderBreedingTicks = getInt("mobs.strider.breeding-delay-ticks", striderBreedingTicks);
+     }
+ 
+     public boolean tropicalFishRidable = false;
+@@ -1003,9 +1039,11 @@ public class PurpurWorldConfig {
+ 
+     public boolean turtleRidable = false;
+     public boolean turtleRidableInWater = false;
++    public int turtleBreedingTicks = 6000;
+     private void turtleSettings() {
+         turtleRidable = getBoolean("mobs.turtle.ridable", turtleRidable);
+         turtleRidableInWater = getBoolean("mobs.turtle.ridable-in-water", turtleRidableInWater);
++        turtleBreedingTicks = getInt("mobs.turtle.breeding-delay-ticks", turtleBreedingTicks);
+     }
+ 
+     public boolean vexRidable = false;
+@@ -1027,6 +1065,7 @@ public class PurpurWorldConfig {
+     public int villagerSpawnIronGolemRadius = 0;
+     public int villagerSpawnIronGolemLimit = 0;
+     public boolean villagerCanBreed = true;
++    public int villagerBreedingTicks = 6000;
+     private void villagerSettings() {
+         villagerRidable = getBoolean("mobs.villager.ridable", villagerRidable);
+         villagerRidableInWater = getBoolean("mobs.villager.ridable-in-water", villagerRidableInWater);
+@@ -1038,6 +1077,7 @@ public class PurpurWorldConfig {
+         villagerSpawnIronGolemRadius = getInt("mobs.villager.spawn-iron-golem.radius", villagerSpawnIronGolemRadius);
+         villagerSpawnIronGolemLimit = getInt("mobs.villager.spawn-iron-golem.limit", villagerSpawnIronGolemLimit);
+         villagerCanBreed = getBoolean("mobs.villager.can-breed", villagerCanBreed);
++        villagerBreedingTicks = getInt("mobs.villager.breeding-delay-ticks", villagerBreedingTicks);
+     }
+ 
+     public boolean villagerTraderRidable = false;
+@@ -1098,9 +1138,11 @@ public class PurpurWorldConfig {
+ 
+     public boolean wolfRidable = false;
+     public boolean wolfRidableInWater = false;
++    public int wolfBreedingTicks = 6000;
+     private void wolfSettings() {
+         wolfRidable = getBoolean("mobs.wolf.ridable", wolfRidable);
+         wolfRidableInWater = getBoolean("mobs.wolf.ridable-in-water", wolfRidableInWater);
++        wolfBreedingTicks = getInt("mobs.wolf.breeding-delay-ticks", wolfBreedingTicks);
+     }
+ 
+     public boolean zoglinRidable = false;

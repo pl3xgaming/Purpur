@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jmp <jasonpenilla2@me.com>
+Date: Thu, 20 Aug 2020 17:38:12 -0700
+Subject: [PATCH] [FEAT] Customizable wither health and healing
+
+Adds the ability to customize the health of the wither, as well as the amount that it heals, and how often.
+
+diff --git a/src/main/java/net/minecraft/world/entity/boss/wither/EntityWither.java b/src/main/java/net/minecraft/world/entity/boss/wither/EntityWither.java
+index 9ffac9aa79dee1b6dd6eeb8483b5a81416c11d9b..528161748472b0fb84718268800864e94ceaa079 100644
+--- a/src/main/java/net/minecraft/world/entity/boss/wither/EntityWither.java
++++ b/src/main/java/net/minecraft/world/entity/boss/wither/EntityWither.java
+@@ -205,6 +205,11 @@ public class EntityWither extends EntityMonster implements IRangedEntity {
+         skull.setPositionRaw(headX, headY, headZ);
+         world.addEntity(skull);
+     }
++
++    @Override
++    public void initAttributes() {
++        this.getAttributeInstance(GenericAttributes.MAX_HEALTH).setValue(world.purpurConfig.witherMaxHealth);
++    }
+     // Purpur end
+ 
+     @Override
+@@ -409,7 +414,7 @@ public class EntityWither extends EntityMonster implements IRangedEntity {
+ 
+             this.setInvul(i);
+             if (this.ticksLived % 10 == 0) {
+-                this.heal(10.0F, EntityRegainHealthEvent.RegainReason.WITHER_SPAWN); // CraftBukkit
++                this.heal(this.getMaxHealth() / 33, EntityRegainHealthEvent.RegainReason.WITHER_SPAWN); // CraftBukkit // Purpur - use max health for healing instead of a constant
+             }
+ 
+         } else {
+@@ -518,8 +523,10 @@ public class EntityWither extends EntityMonster implements IRangedEntity {
+                 }
+             }
+ 
+-            if (this.ticksLived % 20 == 0) {
+-                this.heal(1.0F, EntityRegainHealthEvent.RegainReason.REGEN); // CraftBukkit
++            // Purpur start - customizable heal rate and amount
++            if (this.ticksLived % world.purpurConfig.witherHealthRegenDelay == 0) {
++                this.heal(world.purpurConfig.witherHealthRegenAmount, EntityRegainHealthEvent.RegainReason.REGEN); // CraftBukkit
++                // Purpur end
+             }
+ 
+             //this.bossBattle.setProgress(this.getHealth() / this.getMaxHealth()); // Paper - Moved down
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 55366240f249c05cf3d40eaf29f2cd21cd86cd07..db9deac5b43626b264f1237d8a2d2535d7bb639b 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -979,10 +979,21 @@ public class PurpurWorldConfig {
+     public boolean witherRidable = false;
+     public boolean witherRidableInWater = false;
+     public double witherMaxY = 256D;
++    public float witherHealthRegenAmount = 1.0f;
++    public int witherHealthRegenDelay = 20;
++    public double witherMaxHealth = 300.0D;
+     private void witherSettings() {
+         witherRidable = getBoolean("mobs.wither.ridable", witherRidable);
+         witherRidableInWater = getBoolean("mobs.wither.ridable-in-water", witherRidableInWater);
+         witherMaxY = getDouble("mobs.wither.ridable-max-y", witherMaxY);
++        witherHealthRegenAmount = (float) getDouble("mobs.wither.health-regen-amount", witherHealthRegenAmount);
++        witherHealthRegenDelay = getInt("mobs.wither.health-regen-delay", witherHealthRegenDelay);
++        if (PurpurConfig.version < 8) {
++            double oldValue = getDouble("mobs.wither.max-health", witherMaxHealth);
++            set("mobs.wither.attributes.max-health", oldValue);
++            set("mobs.wither.max-health", null);
++        }
++        witherMaxHealth = getDouble("mobs.wither.attributes.max-health", witherMaxHealth);
+     }
+ 
+     public boolean witherSkeletonRidable = false;

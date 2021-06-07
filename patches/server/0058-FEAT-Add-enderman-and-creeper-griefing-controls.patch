@@ -1,0 +1,90 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Sun, 26 Apr 2020 16:28:38 -0500
+Subject: [PATCH] [FEAT] Add enderman and creeper griefing controls
+
+{EXPLANATION}
+
+$-----------------------------$
+mobs:
+  creeper:
+    allow-griefing:
+      default: true
+      description: |-
+        Control if this mob can grief the world
+  enderman:
+    allow-griefing:
+      default: true
+      description: |-
+        Control if this mob can grief the world
+$-----------------------------$
+
+diff --git a/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java b/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java
+index 63a6b1820f60db9eea49a3a589dd50ad25a3c0a2..09df2bd3b523072de0e9858e6e707e3721474422 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java
++++ b/src/main/java/net/minecraft/world/entity/monster/EntityCreeper.java
+@@ -255,7 +255,7 @@ public class EntityCreeper extends EntityMonster {
+ 
+     public void explode() {
+         if (!this.world.isClientSide) {
+-            Explosion.Effect explosion_effect = this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) ? Explosion.Effect.DESTROY : Explosion.Effect.NONE;
++            Explosion.Effect explosion_effect = this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) && world.purpurConfig.creeperAllowGriefing ? Explosion.Effect.DESTROY : Explosion.Effect.NONE; // Purpur
+             float f = this.isPowered() ? 2.0F : 1.0F;
+ 
+             // CraftBukkit start
+diff --git a/src/main/java/net/minecraft/world/entity/monster/EntityEnderman.java b/src/main/java/net/minecraft/world/entity/monster/EntityEnderman.java
+index e993b1849beb60515c51ee4f37617faab63ca223..6a5593ff735a9e0486d7ed9b3afb4f44ad156b34 100644
+--- a/src/main/java/net/minecraft/world/entity/monster/EntityEnderman.java
++++ b/src/main/java/net/minecraft/world/entity/monster/EntityEnderman.java
+@@ -423,6 +423,7 @@ public class EntityEnderman extends EntityMonster implements IEntityAngerable {
+ 
+         @Override
+         public boolean a() {
++            if (!enderman.world.purpurConfig.endermanAllowGriefing) return false; // Purpur
+             return this.enderman.getCarried() != null ? false : (!this.enderman.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) ? false : this.enderman.getRandom().nextInt(20) == 0);
+         }
+ 
+@@ -456,7 +457,7 @@ public class EntityEnderman extends EntityMonster implements IEntityAngerable {
+ 
+     static class PathfinderGoalEndermanPlaceBlock extends PathfinderGoal {
+ 
+-        private final EntityEnderman a;
++        private final EntityEnderman a; public EntityEnderman getEnderman() { return a; } // Purpur - OBFHELPER
+ 
+         public PathfinderGoalEndermanPlaceBlock(EntityEnderman entityenderman) {
+             this.a = entityenderman;
+@@ -464,6 +465,7 @@ public class EntityEnderman extends EntityMonster implements IEntityAngerable {
+ 
+         @Override
+         public boolean a() {
++            if (!getEnderman().world.purpurConfig.endermanAllowGriefing) return false; // Purpur
+             return this.a.getCarried() == null ? false : (!this.a.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) ? false : this.a.getRandom().nextInt(2000) == 0);
+         }
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 0a6255422a5d22e84cc1048caf7ca964a168b7fe..8033348257c0fcc6f3c1c376b6fb343c414618c5 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -225,8 +225,10 @@ public class PurpurWorldConfig {
+         cowFeedMushrooms = getInt("mobs.cow.feed-mushrooms-for-mooshroom", cowFeedMushrooms);
+     }
+ 
++    public boolean creeperAllowGriefing = true;
+     public double creeperChargedChance = 0.0D;
+     private void creeperSettings() {
++        creeperAllowGriefing = getBoolean("mobs.creeper.allow-griefing", creeperAllowGriefing);
+         creeperChargedChance = getDouble("mobs.creeper.naturally-charged-chance", creeperChargedChance);
+     }
+ 
+@@ -235,6 +237,11 @@ public class PurpurWorldConfig {
+         enderDragonAlwaysDropsFullExp = getBoolean("mobs.ender_dragon.always-drop-full-exp", enderDragonAlwaysDropsFullExp);
+     }
+ 
++    public boolean endermanAllowGriefing = true;
++    private void endermanSettings() {
++        endermanAllowGriefing = getBoolean("mobs.enderman.allow-griefing", endermanAllowGriefing);
++    }
++
+     public boolean foxTypeChangesWithTulips = false;
+     private void foxSettings() {
+         foxTypeChangesWithTulips = getBoolean("mobs.fox.tulips-change-type", foxTypeChangesWithTulips);

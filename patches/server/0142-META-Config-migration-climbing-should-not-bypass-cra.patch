@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jmp <jasonpenilla2@me.com>
+Date: Wed, 2 Dec 2020 14:49:10 -0800
+Subject: [PATCH] [META] Config migration: climbing should not bypass cramming
+ gamerule
+
+TODO - remove with 1.17
+
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index f4fab86ed176aea7d5fca3836e76f53e6101575f..36cfcd57fa3c3d33d46be5e3f70f4cf9a84f8b77 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -145,6 +145,17 @@ public class PurpurConfig {
+         }
+     }
+ 
++    private static void migrateClimbingCrammingFix() {
++        if (PurpurConfig.version < 7) {
++            final boolean climbingCrammingFix = getBoolean("world-settings.default.gameplay-mechanics.fix-climbing-bypassing-cramming-rule", false);
++            set("world-settings.default.gameplay-mechanics.fix-climbing-bypassing-cramming-rule", null);
++            if (climbingCrammingFix) {
++                PaperConfig.config.set("world-settings.default.fix-climbing-bypassing-cramming-rule", true);
++                PaperConfig.saveConfig();
++            }
++        }
++    }
++
+     public static String afkBroadcastAway = "§e§o%s is now AFK";
+     public static String afkBroadcastBack = "§e§o%s is no longer AFK";
+     public static String afkTabListPrefix = "[AFK] ";
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index ed2b682b3717e58eb18ef12c18f362a75174f069..3e2898e3582efc00764885739e1df3a2ab5d5f6e 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -96,6 +96,17 @@ public class PurpurWorldConfig {
+         }
+     }
+ 
++    private void migrateClimbingCrammingFix() {
++        if (PurpurConfig.version < 7) {
++            final boolean climbingCrammingFix = PurpurConfig.config.getBoolean("world-settings." + worldName + ".gameplay-mechanics.fix-climbing-bypassing-cramming-rule", false);
++            PurpurConfig.config.set("world-settings." + worldName + ".gameplay-mechanics.fix-climbing-bypassing-cramming-rule", null);
++            if (climbingCrammingFix) {
++                PaperConfig.config.set("world-settings." + worldName + ".fix-climbing-bypassing-cramming-rule", true);
++                PaperConfig.saveConfig();
++            }
++        }
++    }
++
+     public boolean armorstandSetNameVisible = false;
+     public boolean armorstandFixNametags = false;
+     public float armorstandStepHeight = 0.0F;

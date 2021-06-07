@@ -1,0 +1,89 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <Blake.Galbreath@GMail.com>
+Date: Fri, 7 Aug 2020 12:53:36 -0500
+Subject: [PATCH] [FEAT] [PERF] Add no-random-tick block list
+
+{EXPLANATION}
+
+diff --git a/src/main/java/net/minecraft/server/level/WorldServer.java b/src/main/java/net/minecraft/server/level/WorldServer.java
+index a0c731af6dffa30832b321f8fd86cef76ec06522..9668619480706cb5d3a3e2ed0d85ac5bdd6b3c1f 100644
+--- a/src/main/java/net/minecraft/server/level/WorldServer.java
++++ b/src/main/java/net/minecraft/server/level/WorldServer.java
+@@ -532,14 +532,14 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+         // CraftBukkit end
+         if (com.destroystokyo.paper.PaperConfig.useOptimizedTickList) {
+             this.nextTickListBlock = new com.destroystokyo.paper.server.ticklist.PaperTickList<>(this, (block) -> {
+-                return block == null || block.getBlockData().isAir();
++                return block == null || block.getBlockData().isAir() || purpurConfig.noRandomTickBlocks.contains(block); // Purpur
+             }, IRegistry.BLOCK::getKey, this::b, "Blocks"); // Paper - Timings
+             this.nextTickListFluid = new com.destroystokyo.paper.server.ticklist.PaperTickList<>(this, (fluidtype) -> {
+                 return fluidtype == null || fluidtype == FluidTypes.EMPTY;
+             }, IRegistry.FLUID::getKey, this::a, "Fluids"); // Paper - Timings
+         } else {
+             this.nextTickListBlock = new TickListServer<>(this, (block) -> {
+-                return block == null || block.getBlockData().isAir();
++                return block == null || block.getBlockData().isAir() || purpurConfig.noRandomTickBlocks.contains(block); // Purpur
+             }, IRegistry.BLOCK::getKey, this::b, "Blocks"); // Paper - Timings
+             this.nextTickListFluid = new TickListServer<>(this, (fluidtype) -> {
+                 return fluidtype == null || fluidtype == FluidTypes.EMPTY;
+diff --git a/src/main/java/net/minecraft/world/level/block/state/BlockBase.java b/src/main/java/net/minecraft/world/level/block/state/BlockBase.java
+index 1d82f719440c95765c01a588f4785d630b8b527a..0ea0a1fc5f4d879d48bbdf24731dabec10dbccd1 100644
+--- a/src/main/java/net/minecraft/world/level/block/state/BlockBase.java
++++ b/src/main/java/net/minecraft/world/level/block/state/BlockBase.java
+@@ -671,10 +671,12 @@ public abstract class BlockBase {
+         }
+ 
+         public void a(WorldServer worldserver, BlockPosition blockposition, Random random) {
++            if (worldserver.purpurConfig.noRandomTickBlocks.contains(getBlock())) return; // Purpur
+             this.getBlock().tickAlways(this.p(), worldserver, blockposition, random);
+         }
+ 
+         public void b(WorldServer worldserver, BlockPosition blockposition, Random random) {
++            if (worldserver.purpurConfig.noRandomTickBlocks.contains(getBlock())) return; // Purpur
+             this.getBlock().tick(this.p(), worldserver, blockposition, random);
+         }
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index 96e5aaec4e35bd092e9a71ca5cb61c6a66b9c0fc..aa4302ba319c0968632025524d5a9c5479a693e2 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -11,8 +11,10 @@ import org.bukkit.configuration.ConfigurationSection;
+ 
+ import java.util.ArrayList;
+ import java.util.HashMap;
++import java.util.HashSet;
+ import java.util.List;
+ import java.util.Map;
++import java.util.Set;
+ import java.util.logging.Level;
+ 
+ import static net.pl3x.purpur.PurpurConfig.log;
+@@ -247,6 +249,28 @@ public class PurpurWorldConfig {
+         playerInvulnerableWhileAcceptingResourcePack = getBoolean("gameplay-mechanics.player.invulnerable-while-accepting-resource-pack", playerInvulnerableWhileAcceptingResourcePack);
+     }
+ 
++    public Set<Block> noRandomTickBlocks = new HashSet<>();
++    private void noRandomTickBlocks() {
++        if (PurpurConfig.version < 11) {
++            List<String> oldList = PurpurConfig.config.getStringList("world-settings." + worldName + ".blocks.no-tick");
++            if (!oldList.isEmpty()) {
++                PurpurConfig.config.set("world-settings." + worldName + ".blocks.no-random-tick", oldList);
++                PurpurConfig.config.set("world-settings." + worldName + ".blocks.no-tick", null);
++            }
++            oldList = PurpurConfig.config.getStringList("world-settings.default.blocks.no-tick");
++            if (!oldList.isEmpty()) {
++                PurpurConfig.config.set("world-settings.default.blocks.no-random-tick", oldList);
++                PurpurConfig.config.set("world-settings.default.blocks.no-tick", null);
++            }
++        }
++        getList("blocks.no-random-tick", new ArrayList<>()).forEach(key -> {
++            Block block = IRegistry.BLOCK.get(new MinecraftKey(key.toString()));
++            if (!block.getBlockData().isAir()) {
++                noRandomTickBlocks.add(block);
++            }
++        });
++    }
++
+     public boolean teleportIfOutsideBorder = false;
+     private void teleportIfOutsideBorder() {
+         teleportIfOutsideBorder = getBoolean("gameplay-mechanics.player.teleport-if-outside-border", teleportIfOutsideBorder);

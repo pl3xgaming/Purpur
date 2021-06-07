@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Blake Galbreath <blake.galbreath@gmail.com>
+Date: Sun, 21 Jul 2019 18:01:46 -0500
+Subject: [PATCH] [FIX] Players should not cram to death
+
+Prevent players from getting damaged by the cramming gamerule
+
+diff --git a/src/main/java/net/minecraft/server/level/EntityPlayer.java b/src/main/java/net/minecraft/server/level/EntityPlayer.java
+index 9746ade740ab36e68f24e0ee09d24e23f9e6a68f..4ce97052092c4b5f0fa59de7442654f7025febb6 100644
+--- a/src/main/java/net/minecraft/server/level/EntityPlayer.java
++++ b/src/main/java/net/minecraft/server/level/EntityPlayer.java
+@@ -1581,7 +1581,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+ 
+     @Override
+     public boolean isInvulnerable(DamageSource damagesource) {
+-        return super.isInvulnerable(damagesource) || this.H() || this.abilities.isInvulnerable && damagesource == DamageSource.WITHER;
++        return super.isInvulnerable(damagesource) || this.H() || damagesource == DamageSource.CRAMMING || this.abilities.isInvulnerable && damagesource == DamageSource.WITHER; // Purpur
+     }
+ 
+     @Override
