@@ -91,7 +91,7 @@ This method has the benefit of being able to compile to test your change without
 
 
 ## PR Policy
-We'll accept changes that make sense. You should be able to justify their existence, along with any maintenance costs that come with them. Remember, these changes will affect everyone who runs Paper, not just you and your server.
+We'll accept changes that make sense. You should be able to justify their existence, along with any maintenance costs that come with them. Remember, these changes will affect everyone who runs Purpur, not just you and your server.
 While we will fix minor formatting issues, you should stick to the guide below when making and submitting changes.
 
 ## Formatting
@@ -204,3 +204,13 @@ Again, notice that the field is always public, but the setter is always private.
 ```java
 return this.world.purpurConfig.useInhabitedTime ? this.w : 0;
 ```
+
+### Naming your Patches/PRs
+We use a naming system with a similar concept to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#summary).
+
+Patches are prefixed with a type (`[feat]`, `[fix]`, `[meta]`, `[refactor]`, `[perf]`). The type should also appear in your PR title. 
+
+This lets us and users:
+* know what type of PR it is
+* know what the patches do at a glance
+* categorize the patches
