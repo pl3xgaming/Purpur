@@ -1,0 +1,252 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: NickAc <32451103+NickAcPT@users.noreply.github.com>
+Date: Fri, 25 Jun 2021 13:50:13 +0100
+Subject: [PATCH] Custom Enchantment API
+
+
+diff --git a/src/main/java/net/minecraft/network/FriendlyByteBuf.java b/src/main/java/net/minecraft/network/FriendlyByteBuf.java
+index 70fb9001b12b105fbf471bd0127d8414e03f9329..4c05a9ec9f808fc5d1114bfadcec2c792cb84968 100644
+--- a/src/main/java/net/minecraft/network/FriendlyByteBuf.java
++++ b/src/main/java/net/minecraft/network/FriendlyByteBuf.java
+@@ -472,6 +472,22 @@ public class FriendlyByteBuf extends ByteBuf {
+             if (item.canBeDepleted() || item.shouldOverrideMultiplayerNbt()) {
+                 // Spigot start - filter
+                 stack = stack.copy();
++                // Purpur start - intercept lore and display custom enchantments
++                if (ItemStack.shouldShowInTooltip(stack.getHideFlags(), ItemStack.TooltipPart.ENCHANTMENTS)) {
++                    java.util.Set<Map.Entry<net.minecraft.world.item.enchantment.Enchantment, Integer>> enchantments = net.minecraft.world.item.enchantment.EnchantmentHelper.deserializeEnchantments(stack.getEnchantmentTags()).entrySet();
++                    for (Map.Entry<net.minecraft.world.item.enchantment.Enchantment, Integer> enchantment : enchantments) {
++                        if (enchantment.getKey() instanceof net.pl3x.purpur.enchantments.CraftCustomEnchantment customEnchantment) {
++                            org.bukkit.inventory.ItemStack itemStack = stack.asBukkitMirror();
++                            java.util.List<net.kyori.adventure.text.Component> loreList = itemStack.lore();
++                            if (loreList == null) loreList = new java.util.ArrayList<>();
++
++                            loreList.add(customEnchantment.getCustomEnchantment().displayName(enchantment.getValue()).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false).append(net.pl3x.purpur.enchantments.CraftCustomEnchantment.customEnchantmentMagicSuffix));
++
++                            itemStack.lore(loreList);
++                        }
++                    }
++                }
++                // Purpur end
+                 // CraftItemStack.setItemMeta(stack, CraftItemStack.getItemMeta(stack)); // Paper - This is no longer needed due to NBT being supported
+                 // Spigot end
+                 nbttagcompound = stack.getTag();
+@@ -513,6 +529,19 @@ public class FriendlyByteBuf extends ByteBuf {
+                 }
+                 // Paper end
+                 // CraftItemStack.setItemMeta(itemstack, CraftItemStack.getItemMeta(itemstack)); // Paper - This is no longer needed due to NBT being supported
++                // Purpur start - intercept lore and remove custom enchantments if they come from itemstacks
++                org.bukkit.inventory.ItemStack bukkitStackMirror = itemstack.asBukkitMirror();
++                if (ItemStack.shouldShowInTooltip(itemstack.getHideFlags(), ItemStack.TooltipPart.ENCHANTMENTS)) {
++                    java.util.List<net.kyori.adventure.text.Component> loreList = bukkitStackMirror.lore();
++                    if (loreList != null) {
++                        loreList.removeIf(c -> {
++                            net.kyori.adventure.text.Component customEnchantmentMagicSuffix = net.pl3x.purpur.enchantments.CraftCustomEnchantment.customEnchantmentMagicSuffix;
++                            return c.contains(customEnchantmentMagicSuffix, net.kyori.adventure.text.Component.EQUALS);
++                        });
++                        bukkitStackMirror.lore(loreList);
++                    }
++                }
++                // Purpur end
+             }
+             // CraftBukkit end
+             return itemstack;
+diff --git a/src/main/java/net/minecraft/server/commands/EnchantCommand.java b/src/main/java/net/minecraft/server/commands/EnchantCommand.java
+index a3ac6bebcef7b1e1f9c3ebe525656a15e13f9be8..ac7e4d81f37e4304b9c0ce62f15229ff1c1bafa5 100644
+--- a/src/main/java/net/minecraft/server/commands/EnchantCommand.java
++++ b/src/main/java/net/minecraft/server/commands/EnchantCommand.java
+@@ -19,6 +19,11 @@ import net.minecraft.world.item.enchantment.Enchantment;
+ import net.minecraft.world.item.enchantment.EnchantmentHelper;
+ 
+ public class EnchantCommand {
++    // Purpur start
++    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> SUGGEST_ENCHANTMENTS = (context, builder) -> {
++        return net.minecraft.commands.SharedSuggestionProvider.suggestResource(net.minecraft.core.Registry.ENCHANTMENT.keySet(), builder);
++    };
++    // Purpur end
+     private static final DynamicCommandExceptionType ERROR_NOT_LIVING_ENTITY = new DynamicCommandExceptionType((entityName) -> {
+         return new TranslatableComponent("commands.enchant.failed.entity", entityName);
+     });
+@@ -36,7 +41,7 @@ public class EnchantCommand {
+     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+         dispatcher.register(Commands.literal("enchant").requires((source) -> {
+             return source.hasPermission(2);
+-        }).then(Commands.argument("targets", EntityArgument.entities()).then(Commands.argument("enchantment", ItemEnchantmentArgument.enchantment()).executes((context) -> {
++        }).then(Commands.argument("targets", EntityArgument.entities()).then(Commands.argument("enchantment", ItemEnchantmentArgument.enchantment()).suggests(SUGGEST_ENCHANTMENTS).executes((context) -> { // Purpur - Make enchantment suggestions server side
+             return enchant(context.getSource(), EntityArgument.getEntities(context, "targets"), ItemEnchantmentArgument.getEnchantment(context, "enchantment"), 1);
+         }).then(Commands.argument("level", IntegerArgumentType.integer(0)).executes((context) -> {
+             return enchant(context.getSource(), EntityArgument.getEntities(context, "targets"), ItemEnchantmentArgument.getEnchantment(context, "enchantment"), IntegerArgumentType.getInteger(context, "level"));
+diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
+index 4be9924556e0f447dbe6a53c2d4cb7fb89dac455..2369d52dc61f1b7ef26572d4da84c735433ddbe6 100644
+--- a/src/main/java/net/minecraft/world/item/ItemStack.java
++++ b/src/main/java/net/minecraft/world/item/ItemStack.java
+@@ -1052,11 +1052,11 @@ public final class ItemStack {
+         return list;
+     }
+ 
+-    private static boolean shouldShowInTooltip(int flags, ItemStack.TooltipPart tooltipSection) {
++    public static boolean shouldShowInTooltip(int flags, ItemStack.TooltipPart tooltipSection) { // Purpur - public
+         return (flags & tooltipSection.getMask()) == 0;
+     }
+ 
+-    private int getHideFlags() {
++    public int getHideFlags() { // Purpur - public
+         return this.hasTag() && this.tag.contains("HideFlags", 99) ? this.tag.getInt("HideFlags") : 0;
+     }
+ 
+diff --git a/src/main/java/net/minecraft/world/item/enchantment/EnchantmentCategory.java b/src/main/java/net/minecraft/world/item/enchantment/EnchantmentCategory.java
+index d6417c1e77ac8823e18a179dc9f61757a1f339ad..48f11ac4643daa7bb5f268e0985aa370022f40b9 100644
+--- a/src/main/java/net/minecraft/world/item/enchantment/EnchantmentCategory.java
++++ b/src/main/java/net/minecraft/world/item/enchantment/EnchantmentCategory.java
+@@ -104,6 +104,12 @@ public enum EnchantmentCategory {
+         public boolean canEnchant(Item item) {
+             return item instanceof BowItem || item instanceof CrossbowItem;
+         }
++    },
++    TOOL {
++        @Override
++        public boolean canEnchant(Item item) {
++            return item instanceof net.minecraft.world.item.ShovelItem || item instanceof net.minecraft.world.item.PickaxeItem || item instanceof net.minecraft.world.item.AxeItem || item instanceof net.minecraft.world.item.HoeItem;
++        }
+     // Purpur end
+     };
+ 
+diff --git a/src/main/java/net/pl3x/purpur/enchantments/CraftCustomEnchantment.java b/src/main/java/net/pl3x/purpur/enchantments/CraftCustomEnchantment.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..da200feb6fc5213082d9e7aa371e8a8c31761c04
+--- /dev/null
++++ b/src/main/java/net/pl3x/purpur/enchantments/CraftCustomEnchantment.java
+@@ -0,0 +1,116 @@
++package net.pl3x.purpur.enchantments;
++
++import io.papermc.paper.adventure.PaperAdventure;
++import net.kyori.adventure.text.format.TextColor;
++import net.minecraft.core.Registry;
++import net.minecraft.network.chat.Component;
++import net.minecraft.resources.ResourceLocation;
++import net.minecraft.world.entity.EquipmentSlot;
++import net.minecraft.world.item.ItemStack;
++import net.minecraft.world.item.enchantment.Enchantment;
++import net.minecraft.world.item.enchantment.EnchantmentCategory;
++import org.bukkit.craftbukkit.CraftEquipmentSlot;
++import org.bukkit.craftbukkit.inventory.CraftItemStack;
++import org.bukkit.craftbukkit.util.CraftNamespacedKey;
++import org.jetbrains.annotations.NotNull;
++
++public class CraftCustomEnchantment extends Enchantment {
++
++    //Invisible suffix used to skip custom enchantment lore lines
++    public final static net.kyori.adventure.text.Component customEnchantmentMagicSuffix = net.kyori.adventure.text.Component.space().color(TextColor.color(0xfa02ff)).append(net.kyori.adventure.text.Component.space().color(TextColor.color(0x26b8ff)));
++
++    public CustomEnchantment getCustomEnchantment() {
++        return customEnchantment;
++    }
++
++    private final CustomEnchantment customEnchantment;
++
++    public CraftCustomEnchantment(CustomEnchantment enchantment) {
++        super(tobukkitRarity(enchantment.getRarity()), toNMSCategory(enchantment.getItemTarget()), enchantment.getActiveSlots().stream().map(CraftEquipmentSlot::getNMS).toArray(EquipmentSlot[]::new));
++        customEnchantment = enchantment;
++    }
++
++    public static net.minecraft.world.item.enchantment.Enchantment.Rarity tobukkitRarity(io.papermc.paper.enchantments.EnchantmentRarity bukkitRarity) {
++        if (bukkitRarity == io.papermc.paper.enchantments.EnchantmentRarity.COMMON) {
++            return net.minecraft.world.item.enchantment.Enchantment.Rarity.COMMON;
++        } else if (bukkitRarity == io.papermc.paper.enchantments.EnchantmentRarity.UNCOMMON) {
++            return net.minecraft.world.item.enchantment.Enchantment.Rarity.UNCOMMON;
++        } else if (bukkitRarity == io.papermc.paper.enchantments.EnchantmentRarity.RARE) {
++            return net.minecraft.world.item.enchantment.Enchantment.Rarity.RARE;
++        } else if (bukkitRarity == io.papermc.paper.enchantments.EnchantmentRarity.VERY_RARE) {
++            return net.minecraft.world.item.enchantment.Enchantment.Rarity.VERY_RARE;
++        }
++
++        throw new IllegalArgumentException(String.format("Unable to convert %s to a enum value of %s.", bukkitRarity, net.minecraft.world.item.enchantment.Enchantment.Rarity.class));
++    }
++
++    public static net.minecraft.world.item.enchantment.EnchantmentCategory toNMSCategory(org.bukkit.enchantments.EnchantmentTarget bukkitTarget) {
++        return switch (bukkitTarget) {
++            case ALL -> throw new IllegalArgumentException(String.format("Unable to convert %s to a enum value of %s.", bukkitTarget, net.minecraft.world.item.enchantment.Enchantment.Rarity.class));
++            case ARMOR -> EnchantmentCategory.ARMOR;
++            case ARMOR_FEET -> EnchantmentCategory.ARMOR_FEET;
++            case ARMOR_LEGS -> EnchantmentCategory.ARMOR_LEGS;
++            case ARMOR_TORSO -> EnchantmentCategory.ARMOR_CHEST;
++            case ARMOR_HEAD -> EnchantmentCategory.ARMOR_HEAD;
++            case WEAPON -> EnchantmentCategory.WEAPON;
++            case TOOL -> EnchantmentCategory.TOOL;
++            case BOW -> EnchantmentCategory.BOW;
++            case FISHING_ROD -> EnchantmentCategory.FISHING_ROD;
++            case BREAKABLE -> EnchantmentCategory.BREAKABLE;
++            case WEARABLE -> EnchantmentCategory.WEARABLE;
++            case TRIDENT -> EnchantmentCategory.TRIDENT;
++            case CROSSBOW -> EnchantmentCategory.CROSSBOW;
++            case VANISHABLE -> EnchantmentCategory.VANISHABLE;
++            case BOW_AND_CROSSBOW -> EnchantmentCategory.BOW_AND_CROSSBOW;
++        };
++    }
++
++    @Override
++    public int getMinLevel() {
++        return customEnchantment.getStartLevel();
++    }
++
++    @Override
++    public int getMaxLevel() {
++        return customEnchantment.getMaxLevel();
++    }
++
++    @Override
++    public boolean canEnchant(@NotNull ItemStack stack) {
++        return customEnchantment.canEnchantItem(CraftItemStack.asCraftMirror(stack));
++    }
++
++    @Override
++    public boolean isCurse() {
++        return customEnchantment.isCursed();
++    }
++
++    @Override
++    public boolean isTradeable() {
++        return customEnchantment.isTradeable();
++    }
++
++    @Override
++    public boolean isDiscoverable() {
++        return customEnchantment.isDiscoverable();
++    }
++
++    @Override
++    protected boolean checkCompatibility(@NotNull Enchantment other) {
++        org.bukkit.enchantments.Enchantment bukkitEnchantment = null;
++        if (other instanceof CraftCustomEnchantment otherCustomEnchantment) {
++            bukkitEnchantment = otherCustomEnchantment.getCustomEnchantment();
++        } else {
++            ResourceLocation otherKey = Registry.ENCHANTMENT.getKey(other);
++            if (otherKey != null) {
++                bukkitEnchantment = org.bukkit.enchantments.EnchantmentWrapper.getByKey(CraftNamespacedKey.fromMinecraft(otherKey));
++            }
++        }
++        return super.checkCompatibility(other) && bukkitEnchantment != null && !customEnchantment.conflictsWith(bukkitEnchantment);
++    }
++
++    @Override
++    public @NotNull Component getFullname(int level) {
++        return PaperAdventure.asVanilla(customEnchantment.displayName(level));
++    }
++}
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 12247ec81ecc7be6e28f39cee2cfeeda52056da3..149546eb2e3a82e1a2ac8eb4a2af4b8eb772f540 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -2555,5 +2555,12 @@ public final class CraftServer implements Server {
+     public boolean isLagging() {
+         return getServer().lagging;
+     }
++
++    public void registerEnchantment(net.pl3x.purpur.enchantments.CustomEnchantment enchantment) {
++        net.pl3x.purpur.enchantments.CraftCustomEnchantment nmsEnchantment = new net.pl3x.purpur.enchantments.CraftCustomEnchantment(enchantment);
++
++        Registry.register(Registry.ENCHANTMENT, CraftNamespacedKey.toMinecraft(enchantment.getKey()), nmsEnchantment);
++        org.bukkit.enchantments.Enchantment.registerEnchantment(enchantment);
++    }
+     // Purpur end
+ }

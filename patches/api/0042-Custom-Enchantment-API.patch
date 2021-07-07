@@ -1,0 +1,152 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: NickAc <32451103+NickAcPT@users.noreply.github.com>
+Date: Fri, 25 Jun 2021 13:50:15 +0100
+Subject: [PATCH] Custom Enchantment API
+
+
+diff --git a/src/main/java/net/pl3x/purpur/enchantments/CustomEnchantment.java b/src/main/java/net/pl3x/purpur/enchantments/CustomEnchantment.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0beefd43a8962b8bab506f64c41febe106abce02
+--- /dev/null
++++ b/src/main/java/net/pl3x/purpur/enchantments/CustomEnchantment.java
+@@ -0,0 +1,92 @@
++package net.pl3x.purpur.enchantments;
++
++import java.util.EnumSet;
++import java.util.Locale;
++import java.util.Set;
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.format.NamedTextColor;
++import org.bukkit.Keyed;
++import org.bukkit.NamespacedKey;
++import org.bukkit.enchantments.Enchantment;
++import org.bukkit.entity.EntityCategory;
++import org.bukkit.inventory.EquipmentSlot;
++import org.bukkit.inventory.ItemStack;
++import org.jetbrains.annotations.NotNull;
++
++/**
++ * Plugin provided custom enchantment
++ */
++public abstract class CustomEnchantment extends Enchantment implements Keyed {
++
++    protected CustomEnchantment(NamespacedKey key) {
++        super(key);
++    }
++
++    @Override
++    public @NotNull String getName() {
++        return "CUSTOM_" + getKey().getNamespace().toUpperCase(Locale.ROOT) + "_" + getKey().getKey().toUpperCase(Locale.ROOT);
++    }
++
++    @Override
++    public boolean isCursed() {
++        return false;
++    }
++
++    @Override
++    public boolean isTreasure() {
++        return false;
++    }
++
++    @Override
++    public boolean conflictsWith(@NotNull Enchantment other) {
++        return false;
++    }
++
++    @Override
++    public float getDamageIncrease(int level, @NotNull EntityCategory entityCategory) {
++        return 0;
++    }
++
++    @Override
++    public boolean canEnchantItem(@NotNull ItemStack item) {
++        return true;
++    }
++
++    @Override
++    public boolean isDiscoverable() {
++        return true;
++    }
++
++    @Override
++    public boolean isTradeable() {
++        return true;
++    }
++
++    @NotNull
++    @Override
++    public Set<EquipmentSlot> getActiveSlots() {
++        return EnumSet.allOf(EquipmentSlot.class);
++    }
++
++    @NotNull
++    public abstract Component displayName();
++
++    @NotNull
++    @Override
++    public Component displayName(int level) {
++        Component component = displayName();
++
++        if (level != 1 || this.getMaxLevel() != 1) {
++            component = component.append(Component.space()).append(Component.translatable("enchantment.level." + level));
++        }
++
++        if (this.isCursed()) {
++            component = component.color(NamedTextColor.RED);
++        } else {
++            component = component.color(NamedTextColor.GRAY);
++        }
++
++        return component;
++    }
++
++}
+\ No newline at end of file
+diff --git a/src/main/java/org/bukkit/Bukkit.java b/src/main/java/org/bukkit/Bukkit.java
+index 7354aed0a328d1eab59f29d12d401ff15333036e..0875c2ae91ba93fad240ece8cce8e9b0d572d9c9 100644
+--- a/src/main/java/org/bukkit/Bukkit.java
++++ b/src/main/java/org/bukkit/Bukkit.java
+@@ -2001,5 +2001,13 @@ public final class Bukkit {
+     public static boolean isLagging() {
+         return server.isLagging();
+     }
++
++    /**
++     * Register a plugin provided custom enchantment
++     * @param enchantment The enchantment to register
++     */
++    public static void registerEnchantment(@NotNull net.pl3x.purpur.enchantments.CustomEnchantment enchantment) {
++        server.registerEnchantment(enchantment);
++    }
+     // Purpur end
+ }
+diff --git a/src/main/java/org/bukkit/Server.java b/src/main/java/org/bukkit/Server.java
+index a7fcd00ae37f9a2026759642562b1059c9dd9526..b03c936d2777fca0edfd46220d6dc38e447e638f 100644
+--- a/src/main/java/org/bukkit/Server.java
++++ b/src/main/java/org/bukkit/Server.java
+@@ -1754,5 +1754,11 @@ public interface Server extends PluginMessageRecipient, net.kyori.adventure.audi
+      * @return True if lagging
+      */
+     boolean isLagging();
++
++    /**
++     * Register a plugin provided custom enchantment
++     * @param enchantment The enchantment to register
++     */
++    void registerEnchantment(@NotNull net.pl3x.purpur.enchantments.CustomEnchantment enchantment);
+     // Purpur end
+ }
+diff --git a/src/main/java/org/bukkit/enchantments/Enchantment.java b/src/main/java/org/bukkit/enchantments/Enchantment.java
+index 799813410f40589ba1d7d530a47d87f609764705..47a98da78a43ca003097c44478c7952866282990 100644
+--- a/src/main/java/org/bukkit/enchantments/Enchantment.java
++++ b/src/main/java/org/bukkit/enchantments/Enchantment.java
+@@ -383,7 +383,7 @@ public abstract class Enchantment implements Keyed {
+     public static void registerEnchantment(@NotNull Enchantment enchantment) {
+         if (byKey.containsKey(enchantment.key) || byName.containsKey(enchantment.getName())) {
+             throw new IllegalArgumentException("Cannot set already-set enchantment");
+-        } else if (!isAcceptingRegistrations()) {
++        } else if (!(enchantment instanceof net.pl3x.purpur.enchantments.CustomEnchantment) && !isAcceptingRegistrations()) { // Purpur - always allow registering custom enchantments
+             throw new IllegalStateException("No longer accepting new enchantments (can only be done by the server implementation)");
+         }
+ 
