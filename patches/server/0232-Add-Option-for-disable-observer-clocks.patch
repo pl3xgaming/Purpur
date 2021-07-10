@@ -20,7 +20,7 @@ index 101317912b8299f5be406b75c19cfddb30c1f3f3..01c84a6feebb884e7ed393959e652c76
 +                neighborState.getValue(ObserverBlock.FACING).getOpposite() != direction)) {
              this.startSignal(world, pos);
          }
-+        // Purpur Stop
++        // Purpur End
  
          return super.updateShape(state, direction, neighborState, world, pos, neighborPos);
      }
