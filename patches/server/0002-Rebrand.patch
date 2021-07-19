@@ -5,7 +5,7 @@ Subject: [PATCH] Rebrand
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index 8ccb5183af4a10a92d17570833e21dfffb5b03ea..16f8f8dd9ddc105dde4401fa258207686e64ab3e 100644
+index 8ccb5183af4a10a92d17570833e21dfffb5b03ea..e06002d0aa787a571312536679992bcf9649d463 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
 @@ -36,8 +36,8 @@ repositories {
@@ -19,15 +19,16 @@ index 8ccb5183af4a10a92d17570833e21dfffb5b03ea..16f8f8dd9ddc105dde4401fa25820768
      // Paper start
      implementation("org.jline:jline-terminal-jansi:3.12.1")
      implementation("net.minecrell:terminalconsoleappender:1.2.0")
-@@ -67,6 +67,7 @@ dependencies {
+@@ -67,6 +67,8 @@ dependencies {
  
      implementation("co.aikar:cleaner:1.0-SNAPSHOT") // Paper
      implementation("io.netty:netty-all:4.1.65.Final") // Paper
 +    implementation("cat.inspiracio:rhino-js-engine:1.7.7.1") // Purpur
++    implementation("me.notom3ga:upnp4j:1.0") // Purpur
  
      implementation("org.quiltmc:tiny-mappings-parser:0.3.0") // Paper - needed to read mappings for stacktrace deobfuscation
  
-@@ -87,7 +88,7 @@ tasks.jar {
+@@ -87,7 +89,7 @@ tasks.jar {
          attributes(
              "Main-Class" to "org.bukkit.craftbukkit.Main",
              "Implementation-Title" to "CraftBukkit",

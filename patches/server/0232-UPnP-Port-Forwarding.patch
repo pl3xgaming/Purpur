@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ben Kerllenevich <me@notom3ga.me>
+Date: Sun, 11 Jul 2021 10:22:55 -0400
+Subject: [PATCH] UPnP Port Forwarding
+
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index e74ddf6b72dbd335f8a06f05341d5a4d99afa428..1d583c0964bd7cdaab081d112336842d7a1c6db4 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -309,6 +309,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+     public boolean lagging = false; // Purpur
+     public final SlackActivityAccountant slackActivityAccountant = new SlackActivityAccountant();
+     // Spigot end
++    protected boolean upnp = false; // Purpur
+ 
+     public volatile Thread shutdownThread; // Paper
+     public volatile boolean abnormalExit = false; // Paper
+@@ -1027,6 +1028,15 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+         // CraftBukkit end
+         MinecraftServer.LOGGER.info("Stopping server");
+         MinecraftTimings.stopServer(); // Paper
++        // Purpur start
++        if (upnp) {
++            if (me.notom3ga.upnp4j.UPnP4J.close(this.getPort(), me.notom3ga.upnp4j.util.Protocol.TCP)) {
++                LOGGER.info("[UPnP] Port {} closed", this.getPort());
++            } else {
++                LOGGER.error("[UPnP] Failed to close port {}", this.getPort());
++            }
++        }
++        // Purpur end
+         // CraftBukkit start
+         if (this.server != null) {
+             this.server.disablePlugins();
+diff --git a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
+index a75d1872d63aeba5376d787336e4793e813ba21f..618f0c566e9877c00a4d54f40b02e81155912416 100644
+--- a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
++++ b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -281,6 +281,31 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+             return false;
+         }
+ 
++        // Purpur start
++        if (net.pl3x.purpur.PurpurConfig.useUPnP) {
++            LOGGER.info("[UPnP] Attempting to start UPnP port forwarding service...");
++            if (me.notom3ga.upnp4j.UPnP4J.isUPnPAvailable()) {
++                if (me.notom3ga.upnp4j.UPnP4J.isOpen(this.getPort(), me.notom3ga.upnp4j.util.Protocol.TCP)) {
++                    this.upnp = false;
++                    LOGGER.info("[UPnP] Port {} is already open", this.getPort());
++                } else if (me.notom3ga.upnp4j.UPnP4J.open(this.getPort(), me.notom3ga.upnp4j.util.Protocol.TCP)) {
++                    this.upnp = true;
++                    LOGGER.info("[UPnP] Successfully opened port {}", this.getPort());
++                } else {
++                    this.upnp = false;
++                    LOGGER.info("[UPnP] Failed to open port {}", this.getPort());
++                }
++
++                if (upnp) {
++                    LOGGER.info("[UPnP] {}:{}", me.notom3ga.upnp4j.UPnP4J.getExternalIP(), this.getPort());
++                }
++            } else {
++                this.upnp = false;
++                LOGGER.error("[UPnP] Service is unavailable");
++            }
++        }
++        // Purpur end
++
+         // CraftBukkit start
+         // this.a((PlayerList) (new DedicatedPlayerList(this, this.customRegistry, this.worldNBTStorage))); // Spigot - moved up
+         server.loadPlugins();
+diff --git a/src/main/java/net/pl3x/purpur/PurpurConfig.java b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+index f90256ef0806a61c434a0d062318267184177283..ec95b2801d6e7035f2620d0b7e7f56e8a618c1a4 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurConfig.java
+@@ -454,4 +454,9 @@ public class PurpurConfig {
+     private static void tpsCatchup() {
+         tpsCatchup = getBoolean("settings.tps-catchup", tpsCatchup);
+     }
++
++    public static boolean useUPnP = false;
++    private static void networkSettings() {
++        useUPnP = getBoolean("settings.network.upnp-port-forwarding", useUPnP);
++    }
+ }
