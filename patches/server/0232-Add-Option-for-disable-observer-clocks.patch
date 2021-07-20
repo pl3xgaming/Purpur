@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: DoctaEnkoda <bierquejason@gmail.com>
+Date: Mon, 5 Jul 2021 06:00:17 +0200
+Subject: [PATCH] Add Option for disable observer clocks
+
+Allow to disable observer clocks: https://www.spigotmc.org/attachments/observerclock-gif.365936/
+
+diff --git a/src/main/java/net/minecraft/world/level/block/ObserverBlock.java b/src/main/java/net/minecraft/world/level/block/ObserverBlock.java
+index 101317912b8299f5be406b75c19cfddb30c1f3f3..3390cc2b5f0fea39c46d72702dfc32855413e23e 100644
+--- a/src/main/java/net/minecraft/world/level/block/ObserverBlock.java
++++ b/src/main/java/net/minecraft/world/level/block/ObserverBlock.java
+@@ -63,7 +63,7 @@ public class ObserverBlock extends DirectionalBlock {
+ 
+     @Override
+     public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor world, BlockPos pos, BlockPos neighborPos) {
+-        if (state.getValue(ObserverBlock.FACING) == direction && !(Boolean) state.getValue(ObserverBlock.POWERED)) {
++        if (state.getValue(ObserverBlock.FACING ) == direction && !(Boolean) state.getValue(ObserverBlock.POWERED) && (!world.getMinecraftWorld().purpurConfig.disableObserverClocks || !(neighborState.getBlock() instanceof ObserverBlock) || neighborState.getValue(ObserverBlock.FACING).getOpposite() != direction)) { // Purpur
+             this.startSignal(world, pos);
+         }
+ 
+diff --git a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+index b20fdef329a9b1ef4a873502ed33f4769230f28b..799d127eee9432ba9a1fd06e95eb0bc6c5565a95 100644
+--- a/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
++++ b/src/main/java/net/pl3x/purpur/PurpurWorldConfig.java
+@@ -311,6 +311,11 @@ public class PurpurWorldConfig {
+         villageSiegeSpawning = getBoolean("gameplay-mechanics.mob-spawning.village-sieges", predicate);
+     }
+ 
++    public boolean disableObserverClocks = false;
++    private void observerSettings() {
++        disableObserverClocks = getBoolean("blocks.observer.disable-clock", disableObserverClocks);
++    }
++
+     public int playerNetheriteFireResistanceDuration = 0;
+     public int playerNetheriteFireResistanceAmplifier = 0;
+     public boolean playerNetheriteFireResistanceAmbient = false;
