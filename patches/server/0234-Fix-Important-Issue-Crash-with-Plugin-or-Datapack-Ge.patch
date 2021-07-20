@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: DoctaEnkoda <bierquejason@gmail.com>
+Date: Tue, 20 Jul 2021 02:18:23 +0200
+Subject: [PATCH] Fix Important Issue Crash with Plugin or Datapack Generation
+
+
+diff --git a/src/main/java/net/minecraft/world/level/levelgen/feature/TreeFeature.java b/src/main/java/net/minecraft/world/level/levelgen/feature/TreeFeature.java
+index 2f71e80f6c9d37a97d1d03b7a1d893c825b315fa..ba36676977cc3665a4ea20c556133d4faf06af3e 100644
+--- a/src/main/java/net/minecraft/world/level/levelgen/feature/TreeFeature.java
++++ b/src/main/java/net/minecraft/world/level/levelgen/feature/TreeFeature.java
+@@ -149,7 +149,7 @@ public class TreeFeature extends Feature<TreeConfiguration> {
+             worldGenLevel.setBlock(pos, state, 19);
+         };
+         boolean bl = this.doPlace(worldGenLevel, random, blockPos, biConsumer, biConsumer2, treeConfiguration);
+-        if (bl && (!set.isEmpty() || !set2.isEmpty())) {
++        if (bl && !set.isEmpty() && !set2.isEmpty()) { // Purpur - Fix Paper#6068
+             if (!treeConfiguration.decorators.isEmpty()) {
+                 List<BlockPos> list = Lists.newArrayList(set);
+                 List<BlockPos> list2 = Lists.newArrayList(set2);
